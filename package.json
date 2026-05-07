@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "axios": "^1.11.0",
+    "concurrently": "^9.0.1",
+    "laravel-vite-plugin": "^2.0.0",
+    "path": "^0.12.7",
+    "vite": "^7.1.9",
+    "@popperjs/core": "^2.11.8",
+    "glob": "^11.0.1",
+    "sass": "1.77.6",
+    "vite-plugin-handlebars": "^2.0.0"
+  },
+  "name": "ubold",
+  "version": "8.0.0",
+  "description": "UBold is a modern, responsive admin dashboard available on ThemeForest. Ideal for building CRM, CMS, project management tools, and custom web applications with a clean UI, flexible layouts, and rich features.",
+  "author": "Coderthemes",
+  "dependencies": {
+    "apexcharts": "^5.3.5",
+    "bootstrap": "^5.3.8",
+    "chart.js": "^4.5.1",
+    "choices.js": "^11.2.1",
+    "echarts": "^6.0.0",
+    "flatpickr": "^4.6.13",
+    "jsvectormap": "^1.7.0",
+    "lucide": "^0.542.0",
+    "moment": "^2.30.1",
+    "prismjs": "^1.30.0",
+    "simplebar": "^6.3.3"
+  }
+}

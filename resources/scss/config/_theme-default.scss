@@ -1,0 +1,242 @@
+//
+// Default Theme Mode with RSL Orange
+//
+
+@if $theme-default ==true {
+
+    // Background Light left-sidebar with RSL Orange accents
+    html[data-menu-color='light'] {
+        --#{$prefix}sidenav-bg: #{$white};
+        --#{$prefix}sidenav-border-color: #{$gray-300};
+        --#{$prefix}sidenav-item-color: #667787;
+        --#{$prefix}sidenav-item-hover-color: #ff5100; // RSL Orange
+        --#{$prefix}sidenav-item-hover-bg: transparent;
+        --#{$prefix}sidenav-item-active-color: #ff5100; // RSL Orange
+        --#{$prefix}sidenav-item-active-bg: rgba(255, 81, 0, 0.08); // RSL Orange with opacity
+    }
+
+    // Dark Left Sidebar with RSL Orange accents
+    html[data-menu-color='dark'] {
+        --#{$prefix}sidenav-bg: #1a1e24;
+        --#{$prefix}sidenav-border-color: #1a1e24;
+        --#{$prefix}sidenav-item-color: #8495ab;
+        --#{$prefix}sidenav-item-hover-color: #ff7026; // RSL Orange light
+        --#{$prefix}sidenav-item-hover-bg: rgba(255, 81, 0, 0.1);
+        --#{$prefix}sidenav-item-active-color: #ff5100; // RSL Orange
+        --#{$prefix}sidenav-item-active-bg: rgba(255, 81, 0, 0.15);
+    }
+
+    // Background Gray left-sidebar with RSL Orange accents
+    html[data-menu-color='gray'] {
+        --#{$prefix}sidenav-bg: #e9ebef;
+        --#{$prefix}sidenav-border-color: #e7e9eb;
+        --#{$prefix}sidenav-item-color: #{$gray-700};
+        --#{$prefix}sidenav-item-hover-color: #ff5100; // RSL Orange
+        --#{$prefix}sidenav-item-hover-bg: rgba(255, 81, 0, 0.05);
+        --#{$prefix}sidenav-item-active-color: #e64800; // RSL Orange dark
+        --#{$prefix}sidenav-item-active-bg: rgba(255, 81, 0, 0.08);
+    }
+
+    // Gradient Menu with RSL Orange gradient
+    html[data-menu-color='gradient'] {
+        --#{$prefix}sidenav-bg: linear-gradient(135deg, #ff5100, #cc4100);
+        --#{$prefix}sidenav-border-color: null;
+        --#{$prefix}sidenav-item-color: rgba(255, 255, 255, 0.8);
+        --#{$prefix}sidenav-item-hover-color: #ffffff;
+        --#{$prefix}sidenav-item-hover-bg: rgba(255, 255, 255, 0.1);
+        --#{$prefix}sidenav-item-active-color: #ffffff;
+        --#{$prefix}sidenav-item-active-bg: rgba(255, 255, 255, 0.15);
+    }
+
+    // Image Menu with RSL Orange overlay
+    html[data-menu-color='image'] {
+        --#{$prefix}sidenav-bg: linear-gradient(to bottom right, rgba(255, 81, 0, 0.85), rgba(204, 65, 0, 0.9)), url('/public/images/sidenav-bg.jpg') center/cover no-repeat;
+        --#{$prefix}sidenav-border-color: null;
+        --#{$prefix}sidenav-item-color: rgba(255, 255, 255, 0.85);
+        --#{$prefix}sidenav-item-hover-color: #ffffff;
+        --#{$prefix}sidenav-item-hover-bg: rgba(255, 255, 255, 0.1);
+        --#{$prefix}sidenav-item-active-color: #ffffff;
+        --#{$prefix}sidenav-item-active-bg: rgba(255, 255, 255, 0.15);
+    }
+
+    // RSL Orange Light Topbar
+    html[data-topbar-color='light'] {
+        --#{$prefix}topbar-bg: #ffffff;
+        --#{$prefix}topbar-item-color: #4c4c5c;
+        --#{$prefix}topbar-item-hover-color: #ff5100; // RSL Orange
+        --#{$prefix}topbar-search-bg: transparent;
+        --#{$prefix}topbar-search-border: #e7e9eb;
+        --#{$prefix}topbar-item-active-color: #ff5100;
+    }
+
+    // RSL Orange Gray Topbar
+    html[data-topbar-color='gray'] {
+        --#{$prefix}topbar-bg: #e9ebef;
+        --#{$prefix}topbar-item-color: #4c4c5c;
+        --#{$prefix}topbar-item-hover-color: #ff5100; // RSL Orange
+        --#{$prefix}topbar-search-bg: #e0e1e9;
+        --#{$prefix}topbar-search-border: #e0e1e9;
+        --#{$prefix}topbar-item-active-color: #ff5100;
+    }
+
+    // RSL Orange Dark Topbar
+    html[data-topbar-color='dark'] {
+        --#{$prefix}topbar-bg: #ff5100; // RSL Orange primary
+        --#{$prefix}topbar-item-color: rgba(255, 255, 255, 0.85);
+        --#{$prefix}topbar-item-hover-color: #ffffff;
+        --#{$prefix}topbar-search-bg: rgba(255, 255, 255, 0.15);
+        --#{$prefix}topbar-search-border: rgba(255, 255, 255, 0.2);
+        --#{$prefix}topbar-item-active-color: #ffffff;
+    }
+
+    // RSL Orange Gradient Topbar
+    html[data-topbar-color='gradient'] {
+        --#{$prefix}topbar-bg: linear-gradient(135deg, #ff5100, #cc4100);
+        --#{$prefix}topbar-item-color: rgba(255, 255, 255, 0.85);
+        --#{$prefix}topbar-item-hover-color: #ffffff;
+        --#{$prefix}topbar-search-bg: rgba(255, 255, 255, 0.15);
+        --#{$prefix}topbar-search-border: rgba(255, 255, 255, 0.2);
+        --#{$prefix}topbar-item-active-color: #ffffff;
+    }
+
+    // Dark Mode Sidebar with RSL Orange accents
+    html[data-bs-theme='dark'][data-menu-color='dark'],
+    html[data-bs-theme='dark'][data-menu-color='gray'],
+    html[data-bs-theme='dark'][data-menu-color='light'] {
+        --#{$prefix}sidenav-bg: #1e1f27;
+        --#{$prefix}sidenav-border-color: #2c2d38;
+        --#{$prefix}sidenav-item-color: #8495ab;
+        --#{$prefix}sidenav-item-hover-color: #ff7026; // RSL Orange light
+        --#{$prefix}sidenav-item-hover-bg: rgba(255, 81, 0, 0.1);
+        --#{$prefix}sidenav-item-active-color: #ff5100; // RSL Orange
+        --#{$prefix}sidenav-item-active-bg: rgba(255, 81, 0, 0.15);
+    }
+
+    // Dark Mode Topbar with RSL Orange
+    html[data-bs-theme='dark'][data-topbar-color='light'],
+    html[data-bs-theme='dark'][data-topbar-color='dark'],
+    html[data-bs-theme='dark'][data-topbar-color='gray'] {
+        --#{$prefix}topbar-bg: #252630;
+        --#{$prefix}topbar-item-color: #adb5bf;
+        --#{$prefix}topbar-item-hover-color: #ff7026; // RSL Orange light
+        --#{$prefix}topbar-search-bg: #2d2e3c;
+        --#{$prefix}topbar-search-border: #2d2e3c;
+        --#{$prefix}topbar-item-active-color: #ff5100; // RSL Orange
+    }
+}
+
+// RSL Orange Global Variables (outside the @if statement)
+:root {
+    // RSL Orange Brand Colors
+    --#{$prefix}primary: #ff5100;
+    --#{$prefix}primary-rgb: 255, 81, 0;
+    --#{$prefix}primary-dark: #e64800;
+    --#{$prefix}primary-light: #ff7026;
+    
+    --#{$prefix}secondary: #4a81d4;
+    --#{$prefix}success: #0acf97;
+    --#{$prefix}info: #43bfe5;
+    --#{$prefix}warning: #f7b84b;
+    --#{$prefix}danger: #f1556c;
+    
+    // Component Active States
+    --#{$prefix}component-active-bg: #ff5100;
+    --#{$prefix}component-active-color: #ffffff;
+    
+    // Focus Ring Color
+    --#{$prefix}focus-ring-color: rgba(255, 81, 0, 0.25);
+    
+    // Link Colors
+    --#{$prefix}link-color: #ff5100;
+    --#{$prefix}link-hover-color: #cc4100;
+    
+    // Button Colors
+    --#{$prefix}btn-primary-bg: #ff5100;
+    --#{$prefix}btn-primary-border: #ff5100;
+    --#{$prefix}btn-primary-hover-bg: #e64800;
+    --#{$prefix}btn-primary-hover-border: #e64800;
+    --#{$prefix}btn-primary-active-bg: #cc4100;
+    --#{$prefix}btn-primary-active-border: #cc4100;
+    
+    // Card Border
+    --#{$prefix}theme-card-border-color: rgba(255, 81, 0, 0.15);
+    --#{$prefix}theme-card-box-shadow: 0 2px 8px rgba(255, 81, 0, 0.08);
+    
+    // RSL Orange custom shades
+    --#{$prefix}rsl-orange-50: rgba(255, 81, 0, 0.05);
+    --#{$prefix}rsl-orange-100: rgba(255, 81, 0, 0.1);
+    --#{$prefix}rsl-orange-200: rgba(255, 81, 0, 0.2);
+    --#{$prefix}rsl-orange-300: rgba(255, 81, 0, 0.3);
+    --#{$prefix}rsl-orange-400: rgba(255, 81, 0, 0.4);
+    --#{$prefix}rsl-orange-500: rgba(255, 81, 0, 0.5);
+    --#{$prefix}rsl-orange-600: rgba(255, 81, 0, 0.6);
+    --#{$prefix}rsl-orange-700: rgba(255, 81, 0, 0.7);
+    --#{$prefix}rsl-orange-800: rgba(255, 81, 0, 0.8);
+    --#{$prefix}rsl-orange-900: rgba(255, 81, 0, 0.9);
+    
+    // RSL Orange gradients
+    --#{$prefix}rsl-gradient: linear-gradient(135deg, #ff5100, #cc4100);
+    --#{$prefix}rsl-gradient-hover: linear-gradient(135deg, #e64800, #b83a00);
+}
+
+/* Dark Mode with RSL Orange */
+@if $enable-dark-mode {
+    @include color-mode(dark, true) {
+        --#{$prefix}light: #252630;
+        --#{$prefix}light-rgb: #{to-rgb(#252630)};
+        --#{$prefix}dark: #4b4d5c;
+        --#{$prefix}dark-rgb: #{to-rgb(#4b4d5c)};
+        --#{$prefix}box-shadow: 0px 0px 30px rgba(0, 0, 0, 0.3);
+        
+        // RSL Orange in dark mode
+        --#{$prefix}primary: #ff7026;
+        --#{$prefix}primary-rgb: 255, 112, 38;
+        --#{$prefix}primary-dark: #e64800;
+        --#{$prefix}primary-light: #ff8533;
+        
+        --#{$prefix}component-active-bg: #ff7026;
+        --#{$prefix}link-color: #ff7026;
+        --#{$prefix}link-hover-color: #ff8533;
+        
+        --#{$prefix}btn-primary-bg: #ff7026;
+        --#{$prefix}btn-primary-border: #ff7026;
+        --#{$prefix}btn-primary-hover-bg: #e64800;
+        --#{$prefix}btn-primary-hover-border: #e64800;
+    }
+}
+
+// RSL Orange utility classes (outside @if statement)
+.bg-rsl-orange {
+    background-color: #ff5100 !important;
+}
+
+.bg-rsl-gradient {
+    background: linear-gradient(135deg, #ff5100, #cc4100) !important;
+}
+
+.text-rsl-orange {
+    color: #ff5100 !important;
+}
+
+.border-rsl-orange {
+    border-color: #ff5100 !important;
+}
+
+.btn-rsl-orange {
+    background-color: #ff5100;
+    border-color: #ff5100;
+    color: #ffffff;
+    
+    &:hover {
+        background-color: #e64800;
+        border-color: #e64800;
+        color: #ffffff;
+    }
+    
+    &:focus,
+    &:active {
+        background-color: #cc4100;
+        border-color: #cc4100;
+        color: #ffffff;
+    }
+}
