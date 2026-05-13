@@ -8,6 +8,17 @@ use App\Http\Controllers\BusinessAmendmentController;
 use App\Http\Controllers\TinRegistrationsController;
 use App\Http\Controllers\API\TINAmendmentController;
 
+use App\Models\Role;
+
+
+// API routes for AJAX calls (protected by auth)
+Route::middleware(['wso2.auth'])->group(function () {
+    Route::get('/roles/all', function () {
+        return response()->json(Role::all());
+    })->name('api.roles.all');
+});
+
+
 Route::middleware('api')->group(function () {
 Route::post('/register-tin', [TinRegistrationController::class, 'register']);
 Route::post('/business-registration', [BusinessRegistrationController::class, 'store']);

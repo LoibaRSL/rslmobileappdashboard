@@ -2,35 +2,60 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WSO2Controller;
+use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\RoleManagementController;
+use App\Http\Controllers\WSO2AuthController;
+
+
+
+// WSO2 Authentication Routes
+Route::prefix('auth')->name('auth.')->group(function () {
+    Route::get('wso2', [WSO2AuthController::class, 'redirectToWSO2'])->name('wso2.login');
+    Route::get('wso2/callback', [WSO2AuthController::class, 'handleWSO2Callback'])->name('wso2.callback');
+    Route::post('logout', [WSO2AuthController::class, 'logout'])->name('logout');
+});
+
+// Login route (redirects to WSO2)
+Route::get('/login', function () {
+    return redirect()->route('auth.wso2.login');
+})->name('login');
+
+// Protected Routes (require WSO2 authentication)
+Route::middleware(['wso2.auth'])->group(function () {
+    
+    // Dashboard
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+    
+    // Admin routes with permission checks
+    Route::prefix('admin')->name('admin.')->middleware(['check.permission:view_dashboard'])->group(function () {
+        
+        // User Management Routes
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::post('/users/{user}/assign-roles', [UserManagementController::class, 'assignRoles'])->name('users.assign-roles');
+        Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
+        Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+        Route::post('/users/sync-wso2', [UserManagementController::class, 'syncFromWSO2'])->name('users.sync-wso2');
+        
+        // Role Management Routes
+        Route::resource('roles', RoleManagementController::class);
+    });
+});
 
 Route::get('/', function () {
     return view('index');
 });
 
-// WSO2 Authentication Routes (No Middleware)
-Route::get('login/wso2', [WSO2Controller::class, 'redirectToProvider'])->name('login.wso2');
-Route::get('callback', [WSO2Controller::class, 'handleProviderCallback'])->name('callback');
-Route::post('logout/callback', [WSO2Controller::class, 'logout'])->name('logout');
 
-Route::get('/auth/lock-screen', function () {
-    return view('auth.lock-screen');
-});
 
-Route::get('/auth/sign-in', function () {
-    return view('auth.sign-in');
-});
-
-Route::get('/auth/new-pass', function () {
-    return view('auth.new-pass');
-});
 
 Route::get('/auth/delete-account', function () {
     return view('auth.delete-account');
 });
 
-Route::get('/auth/sign-up', function () {
-    return view('auth.sign-up');
-});
 
 Route::get('/auth/reset-pass', function () {
     return view('auth.reset-pass');
