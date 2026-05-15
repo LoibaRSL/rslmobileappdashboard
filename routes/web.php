@@ -220,3 +220,21 @@ Route::get('/layouts/topbar/gradient', function () {
 Route::get('/layouts/topbar/light', function () {
     return view('layouts.topbar.light');
 });
+
+
+Route::post('/register-tin', [TinRegistrationController::class, 'register']);
+Route::post('/business-registration', [BusinessRegistrationController::class, 'store']);
+Route::get('/business-registrations', [BusinessRegistrationController::class, 'index']);
+Route::get('/business-registration/{id}', [BusinessRegistrationController::class, 'show']);
+Route::post('/amend', [BusinessAmendmentController::class, 'store']);
+
+    Route::post('/register', [TinRegistrationsController::class, 'register']);
+    Route::post('/verify-email', [TinRegistrationsController::class, 'verifyEmail']);
+    Route::get('/status/{ref}', [TinRegistrationsController::class, 'checkStatus']);
+    Route::get('/registration/{id}', [TinRegistrationsController::class, 'getRegistration']);
+         // Amendment routes
+    Route::get('/user-data/{tin}', [TinRegistrationsController::class, 'getUserDataByTin']);
+    Route::post('/amend', [TinRegistrationsController::class, 'amend']);
+    Route::get('/check-amendment/{tin}', [TinRegistrationsController::class, 'checkPendingAmendment']);
+
+
