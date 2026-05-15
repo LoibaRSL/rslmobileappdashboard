@@ -20,9 +20,15 @@ Route::get('/login', function () {
     return redirect()->route('auth.wso2.login');
 })->name('login');
 
+   Route::get('/', function () {
+    return view('auth-split.sign-in');
+});
+
 // Protected Routes (require WSO2 authentication)
 Route::middleware(['wso2.auth'])->group(function () {
+
     
+ 
     // Dashboard
     Route::get('/dashboard', function () {
         return view('dashboard');
@@ -45,9 +51,7 @@ Route::middleware(['wso2.auth'])->group(function () {
     });
 });
 
-Route::get('/', function () {
-    return view('index');
-});
+
 
 
 

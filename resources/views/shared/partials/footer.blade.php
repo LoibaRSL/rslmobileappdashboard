@@ -5,7 +5,7 @@
             <div class="col-12 text-center">
                 ©
                 <span data-current-year=""></span>
-                RSL APP Dashboard 
+                RSL APP Dashboard   
             </div>
         </div>
     </div>

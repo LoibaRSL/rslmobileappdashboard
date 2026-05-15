@@ -30,8 +30,8 @@
                     <p class="text-center text-muted mt-4 mb-0">
                         ©
                         <span data-current-year=""></span>
-                        UBold — by
-                        <span class="fw-semibold">Coderthemes</span>
+                        RSL APP Dashboard — by
+                        <span class="fw-semibold">RSL Mobile App</span>
                     </p>
                 </div>
             </div>
