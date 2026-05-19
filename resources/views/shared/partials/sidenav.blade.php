@@ -24,8 +24,17 @@
                 <div>
                     <a class="link-reset" href="#!">
                         <img alt="user-image" class="rounded-circle mb-2 avatar-md" src="/images/users/user-1.jpg" />
-                        <span class="sidenav-user-name fw-bold">Geneva K.</span>
-                        <span class="fs-12 fw-semibold" data-lang="user-role">Art Director</span>
+                        <span class="sidenav-user-name fw-bold">{{ auth()->user()->name ?? 'User' }}</span>
+                        <span class="fs-12 fw-semibold" data-lang="user-role">
+                            @php
+                                $user = auth()->user();
+                                if($user && $user->roles->count() > 0) {
+                                    echo $user->roles->first()->display_name;
+                                } else {
+                                    echo 'User';
+                                }
+                            @endphp
+                        </span>
                     </a>
                 </div>
                 <div>
@@ -53,10 +62,13 @@
                             <span class="align-middle">Lock Screen</span>
                         </a>
                         <!-- Logout -->
-                        <a class="dropdown-item text-danger fw-semibold" href="javascript:void(0);">
-                            <i class="me-1 fs-lg align-middle" data-lucide="log-out"></i>
-                            <span class="align-middle">Log Out</span>
-                        </a>
+                        <form method="POST" action="{{ route('auth.logout') }}" style="display: inline;">
+                            @csrf
+                            <a class="dropdown-item text-danger fw-semibold" href="javascript:void(0);" onclick="this.closest('form').submit();">
+                                <i class="me-1 fs-lg align-middle" data-lucide="log-out"></i>
+                                <span class="align-middle">Log Out</span>
+                            </a>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -66,194 +78,184 @@
             <ul class="side-nav">
                 <li class="side-nav-title mt-2" data-lang="main">Main</li>
                 <li class="side-nav-item">
-                    <a class="side-nav-link" href="{{ url("/") }}">
+                    <a class="side-nav-link" href="{{ url("/dashboard") }}">
                         <span class="menu-icon"><i data-lucide="layout-dashboard"></i></span>
-                        <span class="menu-text" >Dashboard</span>
+                        <span class="menu-text">Dashboard</span>
                     </a>
                 </li>
-               <!-- <li class="side-nav-title mt-2" data-lang="custom-pages">Custom Pages</li>
+               
+                <!-- TIN Applications Section -->
                 <li class="side-nav-item">
-                    <a class="side-nav-link" href="{{ url("/pages/empty") }}">
-                        <span class="menu-icon"><i data-lucide="book-open-text"></i></span>
-                        <span class="menu-text" data-lang="pages-empty">Empty Page</span>
-                    </a>
-                </li>-->
-                <li class="side-nav-item">
-                    <a aria-controls="authentication" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#authentication">
+                    <a aria-controls="tin-applications" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#tin-applications">
                         <span class="menu-icon"><i data-lucide="file-user"></i></span>
-                        <span class="menu-text" >TIN Applications</span>
+                        <span class="menu-text">TIN Applications</span>
                         <span class="menu-arrow"></span>
                     </a>
-                    <div class="collapse" id="authentication">
+                    <div class="collapse" id="tin-applications">
                         <ul class="sub-menu">
+                            <!-- Individual Applications -->
                             <li class="side-nav-item">
-                                <a aria-controls="auth-basic" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#auth-basic">
-                                    <span class="menu-text" >Individusal</span>
+                                <a aria-controls="individual-apps" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#individual-apps">
+                                    <span class="menu-text">Individual</span>
                                     <span class="menu-arrow"></span>
                                 </a>
-                                <div class="collapse" id="auth-basic">
+                                <div class="collapse" id="individual-apps">
                                     <ul class="sub-menu">
                                         <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth/sign-in") }}">
-                                                <span class="menu-text" >Pending</span>
+                                            <a class="side-nav-link" href="{{ route('tin.individual.pending') }}">
+                                                <span class="menu-text">Pending</span>
                                             </a>
-                                        </li>
+                                        </li> 
                                         <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth/sign-up") }}">
-                                                <span class="menu-text" >Approved</span>
+                                            <a class="side-nav-link" href="{{ route('tin.individual.approved') }}">
+                                                <span class="menu-text">Approved</span>
                                             </a>
                                         </li>
-                                        
                                     </ul>
                                 </div>
                             </li>
+                            
+                            <!-- Business Applications -->
                             <li class="side-nav-item">
-                                <a aria-controls="auth-split" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#auth-split">
-                                    <span class="menu-text" >Business</span>
+                                <a aria-controls="business-apps" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#business-apps">
+                                    <span class="menu-text">Business</span>
                                     <span class="menu-arrow"></span>
                                 </a>
-                                <div class="collapse" id="auth-split">
+                                <div class="collapse" id="business-apps">
                                     <ul class="sub-menu">
+                                        <!-- All Applications -->
                                         <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth-split/sign-in") }}">
-                                                <span class="menu-text" >Pending</span>
-                                            </a>
-                                        </li>
-                                        <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth-split/sign-up") }}">
-                                                <span class="menu-text" >Approved</span>
+                                            <a class="side-nav-link" href="{{ route('admin.registrations.index') }}">
+                                                <span class="menu-text">All Applications</span>
+                                                @php
+                                                    $totalCount = \App\Models\BusinessRegistration::count();
+                                                @endphp
+                                                @if($totalCount > 0)
+                                                    <span class="badge bg-secondary rounded-pill ms-2">{{ $totalCount }}</span>
+                                                @endif
                                             </a>
                                         </li>
                                         
+                                        <!-- Pending Applications -->
+                                        <li class="side-nav-item">
+                                            <a class="side-nav-link" href="{{ route('admin.registrations.pending') }}">
+                                                <span class="menu-text">Pending</span>
+                                                @php
+                                                    $pendingCount = \App\Models\BusinessRegistration::where('status', 'pending')->count();
+                                                @endphp
+                                                @if($pendingCount > 0)
+                                                    <span class="badge bg-warning rounded-pill ms-2">{{ $pendingCount }}</span>
+                                                @endif
+                                            </a>
+                                        </li>
+                                        
+                                        <!-- Approved Applications -->
+                                        <li class="side-nav-item">
+                                            <a class="side-nav-link" href="{{ route('admin.registrations.approved') }}">
+                                                <span class="menu-text">Approved</span>
+                                            </a>
+                                        </li>
+                                        
+                                        <!-- Rejected Applications -->
+                                        <li class="side-nav-item">
+                                            <a class="side-nav-link" href="{{ route('admin.registrations.rejected') }}">
+                                                <span class="menu-text">Rejected</span>
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
                             </li>
                         </ul>
                     </div>
                 </li>
+                
+                <!-- Amendments Section -->
                 <li class="side-nav-item">
-                    <a aria-controls="error-pages" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#error-pages">
+                    <a aria-controls="amendments" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#amendments">
                         <span class="menu-icon"><i data-lucide="book-check"></i></span>
-                        <span class="menu-text" >Amendments</span>
+                        <span class="menu-text">Amendments</span>
                         <span class="menu-arrow"></span>
                     </a>
-                    <div class="collapse" id="error-pages">
+                    <div class="collapse" id="amendments">
                         <ul class="sub-menu">
                             <li class="side-nav-item">
-                                <a aria-controls="auth-basic" aria-expanded="true" class="side-nav-link" data-bs-toggle="collapse" href="#auth-basic">
-                                    <span class="menu-text" >Individusal</span>
-                                    <span class="menu-arrow"></span>
+                                <a class="side-nav-link" href="{{ route('amendments.individual') }}">
+                                    <span class="menu-text">Individual</span>
                                 </a>
-                                <div class="collapse" id="indivstatuse">
-                                    <ul class="sub-menu">
-                                        <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth/sign-in") }}">
-                                                <span class="menu-text" >Pending</span>
-                                            </a>
-                                        </li>
-                                        <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth/sign-up") }}">
-                                                <span class="menu-text" >Approved</span>
-                                            </a>
-                                        </li>
-                                        
-                                    </ul>
-                                </div>
                             </li>
                             <li class="side-nav-item">
-                                <a aria-controls="auth-split" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#auth-split">
-                                    <span class="menu-text" >Business</span>
-                                    <span class="menu-arrow"></span>
+                                <a class="side-nav-link" href="{{ route('amendments.business') }}">
+                                    <span class="menu-text">Business</span>
                                 </a>
-                                <div class="collapse" id="statusbusiness">
-                                    <ul class="sub-menu">
-                                        <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth-split/sign-in") }}">
-                                                <span class="menu-text" >Pending</span>
-                                            </a>
-                                        </li>
-                                        <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ url("/auth-split/sign-up") }}">
-                                                <span class="menu-text" >Approved</span>
-                                            </a>
-                                        </li>
-                                        
-                                    </ul>
-                                </div>
                             </li>
                             <li class="side-nav-item">
-                                <a class="side-nav-link" href="{{ url("/error/403") }}">
-                                    <span class="menu-text" >Graduation</span>
+                                <a class="side-nav-link" href="{{ route('amendments.graduation') }}">
+                                    <span class="menu-text">Graduation</span>
                                 </a>
                             </li>
-
                         </ul>
                     </div>
                 </li>
-                <li class="side-nav-title mt-2" >Returns</li>
+                
+                <!-- Returns Section -->
+                <li class="side-nav-title mt-2">Returns</li>
                 <li class="side-nav-item">
-                    <a aria-controls="layout-options" aria-expanded="false" class="side-nav-link"  href="#layout-options">
+                    <a class="side-nav-link" href="{{ route('returns.resident-tax') }}">
                         <span class="menu-icon"><i data-lucide="map-pin-house"></i></span>
-                        <span class="menu-text" >Resident Individual Tax</span>
-                       
+                        <span class="menu-text">Resident Individual Tax</span>
                     </a>
-                    
                 </li>
-
-
-
-                <li class="side-nav-title mt-2" >Reports</li>
+                
+                <!-- Reports Section -->
+                <li class="side-nav-title mt-2">Reports</li>
                 <li class="side-nav-item">
-                    <a aria-controls="layout-options" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#layout-options">
+                    <a aria-controls="reports-registration" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#reports-registration">
                         <span class="menu-icon"><i data-lucide="book-open-text"></i></span>
-                        <span class="menu-text" >Registration</span>
+                        <span class="menu-text">Registration</span>
                         <span class="menu-arrow"></span>
                     </a>
-                    <div class="collapse" id="layout-options">
+                    <div class="collapse" id="reports-registration">
                         <ul class="sub-menu">
                             <li class="side-nav-item">
-                                <a class="side-nav-link" href="{{ url("/layouts/scrollable") }}" target="_blank">
-                                    <span class="menu-text" >Individual</span>
+                                <a class="side-nav-link" href="{{ route('reports.registration.individual') }}">
+                                    <span class="menu-text">Individual</span>
                                 </a>
                             </li>
                             <li class="side-nav-item">
-                                <a class="side-nav-link" href="{{ url("/layouts/compact") }}" target="_blank">
-                                    <span class="menu-text" >Business</span>
+                                <a class="side-nav-link" href="{{ route('reports.registration.business') }}">
+                                    <span class="menu-text">Business</span>
                                 </a>
                             </li>
-                            
                         </ul>
                     </div>
                 </li>
+                
                 <li class="side-nav-item">
-                    <a aria-controls="sidebars" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#sidebars">
+                    <a aria-controls="reports-amendments" aria-expanded="false" class="side-nav-link" data-bs-toggle="collapse" href="#reports-amendments">
                         <span class="menu-icon"><i data-lucide="book-check"></i></span>
-                        <span class="menu-text" >Amendments</span>
+                        <span class="menu-text">Amendments</span>
                         <span class="menu-arrow"></span>
                     </a>
-                    <div class="collapse" id="sidebars">
+                    <div class="collapse" id="reports-amendments">
                         <ul class="sub-menu">
                             <li class="side-nav-item">
-                                <a class="side-nav-link" href="{{ url("/layouts/sidebar/dark") }}" target="_blank">
-                                    <span class="menu-text" >Individual</span>
+                                <a class="side-nav-link" href="{{ route('reports.amendments.individual') }}">
+                                    <span class="menu-text">Individual</span>
                                 </a>
                             </li>
                             <li class="side-nav-item">
-                                <a class="side-nav-link" href="{{ url("/layouts/sidebar/gradient") }}" target="_blank">
-                                    <span class="menu-text" >Business</span>
+                                <a class="side-nav-link" href="{{ route('reports.amendments.business') }}">
+                                    <span class="menu-text">Business</span>
                                 </a>
                             </li>
                             <li class="side-nav-item">
-                                <a class="side-nav-link" href="{{ url("/layouts/sidebar/gray") }}" target="_blank">
-                                    <span class="menu-text" >Graduation</span>
+                                <a class="side-nav-link" href="{{ route('reports.amendments.graduation') }}">
+                                    <span class="menu-text">Graduation</span>
                                 </a>
                             </li>
-                            
                         </ul>
                     </div>
                 </li>
-               
-               
             </ul>
         </div>
     </div>

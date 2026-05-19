@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\CheckPermission;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,7 +12,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Register middleware aliases
+        $middleware->alias([
+            'wso2.auth' => \App\Http\Middleware\WSO2Authenticate::class,
+            'check.permission' => CheckPermission::class,
+        ]);
+        
+        // Add middleware to web group if needed
+        $middleware->web(append: [
+            // Add any custom web middleware here
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
