@@ -102,11 +102,11 @@ Route::prefix('tin/business')->name('tin.business.')->group(function () {
             Route::post('/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('toggle-status');
             Route::delete('/{user}', [UserManagementController::class, 'destroy'])->name('destroy');
             Route::post('/sync-wso2', [UserManagementController::class, 'syncFromWSO2'])->name('sync-wso2');
-        });
+        }); 
         
         // Role Management Routes
         Route::resource('roles', RoleManagementController::class);
-        
+         
         // Business Registration Management Routes
         Route::prefix('registrations')->name('registrations.')->group(function () {
             Route::get('/', [BusinessRegistrationController::class, 'index'])->name('index');
@@ -118,7 +118,7 @@ Route::prefix('tin/business')->name('tin.business.')->group(function () {
             Route::post('/{id}/reject', [BusinessRegistrationController::class, 'reject'])->name('reject');
             Route::post('/bulk-approve', [BusinessRegistrationController::class, 'bulkApprove'])->name('bulk-approve');
             Route::post('/bulk-reject', [BusinessRegistrationController::class, 'bulkReject'])->name('bulk-reject');
-            Route::get('/export/csv', [BusinessRegistrationController::class, 'export'])->name('export');
+            Route::get('/export/csv', [BusinessRegistrationController::class, 'export'])->name('export');     
         });
     });
 });
