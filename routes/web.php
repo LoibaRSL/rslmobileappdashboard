@@ -5,8 +5,15 @@ use App\Http\Controllers\WSO2Controller;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\WSO2AuthController;
-
-
+use App\Http\Controllers\Admin\BusinessRegistrationController;
+use App\Http\Controllers\TinRegistrationController;
+use App\Http\Controllers\BusinessRegistrationController as PublicBusinessRegistrationController;
+use App\Http\Controllers\BusinessAmendmentController;
+use App\Http\Controllers\TinRegistrationsController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AmendmentsController;
+use App\Http\Controllers\ReturnsController;
+use App\Http\Controllers\ReportsController;
 
 // WSO2 Authentication Routes
 Route::prefix('auth')->name('auth.')->group(function () {
@@ -20,46 +27,120 @@ Route::get('/login', function () {
     return redirect()->route('auth.wso2.login');
 })->name('login');
 
-   Route::get('/', function () {
+Route::get('/', function () {
     return view('auth-split.sign-in');
 });
 
 // Protected Routes (require WSO2 authentication)
 Route::middleware(['wso2.auth'])->group(function () {
-
     
- 
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/refresh', [DashboardController::class, 'refresh'])->name('dashboard.refresh');
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats'])->name('dashboard.stats');
+    
+    // TIN Individual Routes
+    Route::prefix('tin/individual')->name('tin.individual.')->group(function () {
+        Route::get('/create', [TinRegistrationController::class, 'create'])->name('create');
+        Route::post('/store', [TinRegistrationController::class, 'store'])->name('store');
+        Route::get('/pending', [TinRegistrationController::class, 'pending'])->name('pending');
+        Route::get('/approved', [TinRegistrationController::class, 'approved'])->name('approved');
+        Route::get('/rejected', [TinRegistrationController::class, 'rejected'])->name('rejected');
+        Route::get('/{id}', [TinRegistrationController::class, 'show'])->name('show');
+    });
+
+    // TIN Business Routes (admin Views)
+Route::prefix('tin/business')->name('tin.business.')->group(function () {
+    // Use Web controller for views
+    Route::get('/', [App\Http\Controllers\admin\BusinessRegistrationController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\admin\BusinessRegistrationController::class, 'create'])->name('create');
+    Route::get('/pending', [App\Http\Controllers\admin\BusinessRegistrationController::class, 'pending'])->name('pending');
+    Route::get('/approved', [App\Http\Controllers\admin\BusinessRegistrationController::class, 'approved'])->name('approved');
+    Route::get('/rejected', [App\Http\Controllers\admin\BusinessRegistrationController::class, 'rejected'])->name('rejected');
+    Route::get('/my-applications', [App\Http\Controllers\admin\BusinessRegistrationController::class, 'myApplications'])->name('my-applications');
+    Route::get('/{id}', [App\Http\Controllers\admin\BusinessRegistrationController::class, 'show'])->name('show');
+});
+        
+    // Amendments Routes
+    Route::prefix('amendments')->name('amendments.')->group(function () {
+        Route::get('/individual', [AmendmentsController::class, 'individual'])->name('individual');
+        Route::get('/business', [AmendmentsController::class, 'business'])->name('business');
+        Route::get('/graduation', [AmendmentsController::class, 'graduation'])->name('graduation');
+        Route::post('/store', [BusinessAmendmentController::class, 'store'])->name('store');
+    });
+    
+    // Returns Routes
+    Route::prefix('returns')->name('returns.')->group(function () {
+        Route::get('/resident-tax', [ReturnsController::class, 'residentTax'])->name('resident-tax');
+        Route::get('/non-resident-tax', [ReturnsController::class, 'nonResidentTax'])->name('non-resident-tax');
+        Route::get('/vat', [ReturnsController::class, 'vat'])->name('vat');
+    });
+    
+    // Reports Routes
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::prefix('registration')->name('registration.')->group(function () {
+            Route::get('/individual', [ReportsController::class, 'registrationIndividual'])->name('individual');
+            Route::get('/business', [ReportsController::class, 'registrationBusiness'])->name('business');
+            Route::get('/export', [ReportsController::class, 'exportRegistration'])->name('export');
+        });
+        Route::prefix('amendments')->name('amendments.')->group(function () {
+            Route::get('/individual', [ReportsController::class, 'amendmentsIndividual'])->name('individual');
+            Route::get('/business', [ReportsController::class, 'amendmentsBusiness'])->name('business');
+            Route::get('/graduation', [ReportsController::class, 'amendmentsGraduation'])->name('graduation');
+        });
+    });
     
     // Admin routes with permission checks
     Route::prefix('admin')->name('admin.')->middleware(['check.permission:view_dashboard'])->group(function () {
         
         // User Management Routes
-        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
-        Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
-        Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
-        Route::post('/users/{user}/assign-roles', [UserManagementController::class, 'assignRoles'])->name('users.assign-roles');
-        Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
-        Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
-        Route::post('/users/sync-wso2', [UserManagementController::class, 'syncFromWSO2'])->name('users.sync-wso2');
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [UserManagementController::class, 'index'])->name('index');
+            Route::get('/{user}/edit', [UserManagementController::class, 'edit'])->name('edit');
+            Route::put('/{user}', [UserManagementController::class, 'update'])->name('update');
+            Route::post('/{user}/assign-roles', [UserManagementController::class, 'assignRoles'])->name('assign-roles');
+            Route::post('/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('toggle-status');
+            Route::delete('/{user}', [UserManagementController::class, 'destroy'])->name('destroy');
+            Route::post('/sync-wso2', [UserManagementController::class, 'syncFromWSO2'])->name('sync-wso2');
+        });
         
         // Role Management Routes
         Route::resource('roles', RoleManagementController::class);
+        
+        // Business Registration Management Routes
+        Route::prefix('registrations')->name('registrations.')->group(function () {
+            Route::get('/', [BusinessRegistrationController::class, 'index'])->name('index');
+            Route::get('/pending', [BusinessRegistrationController::class, 'pending'])->name('pending');
+            Route::get('/approved', [BusinessRegistrationController::class, 'approved'])->name('approved');
+            Route::get('/rejected', [BusinessRegistrationController::class, 'rejected'])->name('rejected');
+            Route::get('/{id}', [BusinessRegistrationController::class, 'show'])->name('show');
+            Route::post('/{id}/approve', [BusinessRegistrationController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [BusinessRegistrationController::class, 'reject'])->name('reject');
+            Route::post('/bulk-approve', [BusinessRegistrationController::class, 'bulkApprove'])->name('bulk-approve');
+            Route::post('/bulk-reject', [BusinessRegistrationController::class, 'bulkReject'])->name('bulk-reject');
+            Route::get('/export/csv', [BusinessRegistrationController::class, 'export'])->name('export');
+        });
     });
 });
 
+// Public API Routes (No authentication required)
+Route::post('/register-tin', [TinRegistrationController::class, 'register']);
+Route::post('/business-registration', [PublicBusinessRegistrationController::class, 'store']);
+Route::get('/business-registrations', [PublicBusinessRegistrationController::class, 'index']);
+Route::get('/business-registration/{id}', [PublicBusinessRegistrationController::class, 'show']);
+Route::post('/amend', [BusinessAmendmentController::class, 'store']);
+Route::post('/register', [TinRegistrationsController::class, 'register']);
+Route::post('/verify-email', [TinRegistrationsController::class, 'verifyEmail']);
+Route::get('/status/{ref}', [TinRegistrationsController::class, 'checkStatus']);
+Route::get('/registration/{id}', [TinRegistrationsController::class, 'getRegistration']);
+Route::get('/user-data/{tin}', [TinRegistrationsController::class, 'getUserDataByTin']);
+Route::post('/amend', [TinRegistrationsController::class, 'amend']);
+Route::get('/check-amendment/{tin}', [TinRegistrationsController::class, 'checkPendingAmendment']);
 
-
-
-
-
+// Static Routes (UI Views)
 Route::get('/auth/delete-account', function () {
     return view('auth.delete-account');
 });
-
 
 Route::get('/auth/reset-pass', function () {
     return view('auth.reset-pass');
@@ -220,21 +301,3 @@ Route::get('/layouts/topbar/gradient', function () {
 Route::get('/layouts/topbar/light', function () {
     return view('layouts.topbar.light');
 });
-
-
-Route::post('/register-tin', [TinRegistrationController::class, 'register']);
-Route::post('/business-registration', [BusinessRegistrationController::class, 'store']);
-Route::get('/business-registrations', [BusinessRegistrationController::class, 'index']);
-Route::get('/business-registration/{id}', [BusinessRegistrationController::class, 'show']);
-Route::post('/amend', [BusinessAmendmentController::class, 'store']);
-
-    Route::post('/register', [TinRegistrationsController::class, 'register']);
-    Route::post('/verify-email', [TinRegistrationsController::class, 'verifyEmail']);
-    Route::get('/status/{ref}', [TinRegistrationsController::class, 'checkStatus']);
-    Route::get('/registration/{id}', [TinRegistrationsController::class, 'getRegistration']);
-         // Amendment routes
-    Route::get('/user-data/{tin}', [TinRegistrationsController::class, 'getUserDataByTin']);
-    Route::post('/amend', [TinRegistrationsController::class, 'amend']);
-    Route::get('/check-amendment/{tin}', [TinRegistrationsController::class, 'checkPendingAmendment']);
-
-
