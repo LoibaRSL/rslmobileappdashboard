@@ -14,6 +14,56 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AmendmentsController;
 use App\Http\Controllers\ReturnsController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\DS\ViewController;
+
+
+// ============ DIGITAL SERVICES WEB ROUTES (Views) ============
+Route::middleware(['wso2.auth'])->prefix('ds')->name('ds.')->group(function () {
+    // View Routes (return Blade views)
+    Route::get('/dashboard', [ViewController::class, 'dashboard'])->name('dashboard');
+    Route::get('/registrations/all', [ViewController::class, 'allRegistrations'])->name('registrations.all');
+    Route::get('/registrations/unassigned', [ViewController::class, 'unassigned'])->name('registrations.unassigned');
+    Route::get('/registrations/my-assignments', [ViewController::class, 'myAssignments'])->name('registrations.my-assignments');
+    Route::get('/registrations/approved', [ViewController::class, 'approved'])->name('registrations.approved');
+    Route::get('/registrations/rejected', [ViewController::class, 'rejected'])->name('registrations.rejected');
+    
+    // Admin only views
+    Route::middleware(['admin'])->group(function () {
+        Route::get('/users', [ViewController::class, 'users'])->name('users.index');
+        Route::get('/users/create', [ViewController::class, 'createUser'])->name('users.create');
+        Route::get('/reports', [ViewController::class, 'reports'])->name('reports');
+    });
+});
+
+// ============ DIGITAL SERVICES API ROUTES (for AJAX calls) ============
+Route::middleware(['wso2.auth', 'digital.services'])->prefix('api/ds')->name('ds.api.')->group(function () {
+    // Dashboard API
+    Route::get('/dashboard', [TinRegistrationDSController::class, 'dashboard'])->name('dashboard');
+    Route::get('/users/ds-users', [TinRegistrationDSController::class, 'getDSUsers'])->name('users.ds-users');
+    
+    // Registration listing APIs
+    Route::get('/registrations/unassigned', [TinRegistrationDSController::class, 'getUnassigned'])->name('registrations.unassigned');
+    Route::get('/registrations/my-assignments', [TinRegistrationDSController::class, 'getMyAssignments'])->name('registrations.my-assignments');
+    Route::get('/registrations/all', [TinRegistrationDSController::class, 'getAllRegistrations'])->name('registrations.all');
+    Route::get('/registrations/approved', [TinRegistrationDSController::class, 'getApproved'])->name('registrations.approved');
+    Route::get('/registrations/rejected', [TinRegistrationDSController::class, 'getRejected'])->name('registrations.rejected');
+    Route::get('/registrations/{id}', [TinRegistrationDSController::class, 'show'])->name('registrations.show');
+    Route::get('/registrations/{id}/assignment-history', [TinRegistrationDSController::class, 'getAssignmentHistory'])->name('registrations.assignment-history');
+    
+    // Assignment actions
+    Route::post('/registrations/{id}/assign-to-self', [TinRegistrationDSController::class, 'assignToSelf'])->name('registrations.assign-to-self');
+    Route::post('/registrations/{id}/assign-to-user', [TinRegistrationDSController::class, 'assignToUser'])->name('registrations.assign-to-user');
+    
+    // Review actions
+    Route::post('/registrations/{id}/approve', [TinRegistrationDSController::class, 'approve'])->name('registrations.approve');
+    Route::post('/registrations/{id}/reject', [TinRegistrationDSController::class, 'reject'])->name('registrations.reject');
+    
+    // Export
+    Route::get('/export', [TinRegistrationDSController::class, 'export'])->name('export');
+});
+
+
+
 
 // WSO2 Authentication Routes
 Route::prefix('auth')->name('auth.')->group(function () {
@@ -102,11 +152,11 @@ Route::prefix('tin/business')->name('tin.business.')->group(function () {
             Route::post('/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('toggle-status');
             Route::delete('/{user}', [UserManagementController::class, 'destroy'])->name('destroy');
             Route::post('/sync-wso2', [UserManagementController::class, 'syncFromWSO2'])->name('sync-wso2');
-        }); 
+        });
         
         // Role Management Routes
         Route::resource('roles', RoleManagementController::class);
-         
+        
         // Business Registration Management Routes
         Route::prefix('registrations')->name('registrations.')->group(function () {
             Route::get('/', [BusinessRegistrationController::class, 'index'])->name('index');

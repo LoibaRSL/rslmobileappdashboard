@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'wso2.auth' => \App\Http\Middleware\WSO2Authenticate::class,
             'check.permission' => CheckPermission::class,
+            'digital.services' => DigitalServicesMiddleware::class,
         ]);
         
         // Add middleware to web group if needed

@@ -101,16 +101,27 @@
                                 </a>
                                 <div class="collapse" id="individual-apps">
                                     <ul class="sub-menu">
-                                        <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ route('tin.individual.pending') }}">
-                                                <span class="menu-text">Pending</span>
-                                            </a>
-                                        </li> 
-                                        <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ route('tin.individual.approved') }}">
-                                                <span class="menu-text">Approved</span>
-                                            </a>
-                                        </li>
+                                   
+                                            <!-- In your navigation, use these route names -->
+<a class="side-nav-link" href="{{ route('ds.registrations.all') }}">
+    <span class="menu-text">All Submissions</span>
+</a>
+
+<a class="side-nav-link" href="{{ route('ds.registrations.unassigned') }}">
+    <span class="menu-text">Pending (Unassigned)</span>
+</a>
+
+<a class="side-nav-link" href="{{ route('ds.registrations.approved') }}">
+    <span class="menu-text">Approved</span>
+</a>
+
+<a class="side-nav-link" href="{{ route('ds.registrations.rejected') }}">
+    <span class="menu-text">Rejected</span>
+</a>
+
+<a class="side-nav-link" href="{{ route('ds.registrations.my-assignments') }}">
+    <span class="menu-text">My Assignments</span>
+</a>
                                     </ul>
                                 </div>
                             </li>
@@ -125,40 +136,31 @@
                                     <ul class="sub-menu">
                                         <!-- All Applications -->
                                         <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ route('admin.registrations.index') }}">
+                                            <a class="side-nav-link" href="{{ route('tin.business.index') }}">
                                                 <span class="menu-text">All Applications</span>
-                                                @php
-                                                    $totalCount = \App\Models\BusinessRegistration::count();
-                                                @endphp
-                                                @if($totalCount > 0)
-                                                    <span class="badge bg-secondary rounded-pill ms-2">{{ $totalCount }}</span>
-                                                @endif
+                                              
+                                                   
+                                               
                                             </a>
                                         </li>
                                         
                                         <!-- Pending Applications -->
                                         <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ route('admin.registrations.pending') }}">
-                                                <span class="menu-text">Pending</span>
-                                                @php
-                                                    $pendingCount = \App\Models\BusinessRegistration::where('status', 'pending')->count();
-                                                @endphp
-                                                @if($pendingCount > 0)
-                                                    <span class="badge bg-warning rounded-pill ms-2">{{ $pendingCount }}</span>
-                                                @endif
+                                            <a class="side-nav-link" href="{{ route('tin.business.pending') }}">
+                                                
                                             </a>
                                         </li>
                                         
                                         <!-- Approved Applications -->
                                         <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ route('admin.registrations.approved') }}">
+                                            <a class="side-nav-link" href="{{ route('tin.business.approved') }}">
                                                 <span class="menu-text">Approved</span>
                                             </a>
                                         </li>
                                         
                                         <!-- Rejected Applications -->
                                         <li class="side-nav-item">
-                                            <a class="side-nav-link" href="{{ route('admin.registrations.rejected') }}">
+                                            <a class="side-nav-link" href="{{ route('tin.business.rejected') }}">
                                                 <span class="menu-text">Rejected</span>
                                             </a>
                                         </li>

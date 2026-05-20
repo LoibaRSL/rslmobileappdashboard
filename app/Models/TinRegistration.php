@@ -73,7 +73,9 @@ class TinRegistration extends Model
         'amendment_submitted_at',
         'remarks',
         'amendment_notes',
-        'amendment_submitted_at'
+        'amendment_submitted_at',
+        'assigned_to_user_id',
+        'assigned_at',
     ];
 
     protected $casts = [
@@ -83,6 +85,7 @@ class TinRegistration extends Model
         'other_id_expiry' => 'date',
         'email_verified' => 'boolean',
         'declaration_accepted' => 'boolean',
+        'assigned_at' => 'datetime',
     ];
 
    // Generate TIN
