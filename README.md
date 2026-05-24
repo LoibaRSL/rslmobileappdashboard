@@ -1,59 +1,140 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# RSL Mobile App Dashboard
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel dashboard and API for RSL/LRA digital tax services. The application manages individual TIN registrations, business registrations, business amendments, Digital Services review queues, role-based administration, WSO2 login, SMS notifications, and external SOAP submission workflows.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2+
+- Laravel 13
+- MySQL/MariaDB
+- Vite
+- Bootstrap 5 / UBold admin theme
+- Laravel Socialite for WSO2 authentication
+- Laravel Sanctum personal access tokens
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Main Modules
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- WSO2 authentication and logout
+- Dashboard statistics and recent activity
+- Individual TIN registration and amendment APIs
+- Business registration submission, document uploads, review, approval, rejection, and CSV export
+- Business amendment submission and review tracking
+- Digital Services registration assignment and review queues
+- User, role, and permission management
+- SMS notifications
+- SOAP integration services for individual, business, and amendment submissions
 
-## Learning Laravel
+## Important Paths
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- Web routes: `routes/web.php`
+- API routes: `routes/api.php`
+- Models: `app/Models`
+- Controllers: `app/Http/Controllers`
+- Services and integrations: `app/Services`
+- Views: `resources/views`
+- Frontend assets: `resources/js`, `resources/scss`
+- Migrations: `database/migrations`
+- Seeders: `database/seeders`
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Local Setup
 
-## Laravel Sponsors
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Configure the database and integration settings in `.env`, then run one of the database setup paths below.
 
-### Premium Partners
+### Fresh Migration Path
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+php artisan migrate --seed
+npm run build
+php artisan serve
+```
 
-## Contributing
+Use this path only after confirming the migrations match the intended production schema.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Existing Dump Path
 
-## Code of Conduct
+The current database dump lives outside this project at:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```text
+C:\xampp_lite_8_5\www\rslstart.sql
+```
 
-## Security Vulnerabilities
+It is a dump for database `rslstart` and includes application data. Treat it as sensitive because it appears to contain taxpayer/user registration records.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Example import:
 
-## License
+```bash
+mysql -u root -p rslstart < C:\xampp_lite_8_5\www\rslstart.sql
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+After import, update `.env`:
+
+```env
+DB_DATABASE=rslstart
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+## Database Cleanup Status
+
+The dump and migrations are not currently identical.
+
+Tables present in the dump but not created by migrations:
+
+- `banking_details`
+- `mobile_money_details`
+- `phone_details`
+- `business_amendments`
+- `business_amendment_files`
+- `business_amendment_histories`
+- `business_registration_histories`
+- `t_i_n_applications`
+
+Tables created by migrations but not present in the dump:
+
+- `business_accountant_details`
+- `business_antl_details`
+- `business_bank_details`
+- `business_contact_details`
+- `business_declaration_details`
+- `business_director_partners`
+- `business_fbt_details`
+- `business_mobile_money_details`
+- `business_nominated_officer_details`
+- `business_paye_details`
+- `business_personal_identification`
+- `business_plastic_levy_details`
+- `business_sbt_details`
+- `business_soap_integration`
+- `business_sole_trader_details`
+- `business_structured_phones`
+- `business_vat_details`
+- `business_wht_details`
+- `tin_assignment_history`
+
+The current model code is closer to the dump for business registrations because `BusinessRegistration` uses JSON-style columns such as `name_structure`, `structured_postal_address`, `trade_details`, and `file_attachments`. Before relying on fresh migrations, reconcile these differences.
+
+## Known Cleanup Items
+
+- Normalize `app/Services` casing and remove duplicated service files under `app/services`.
+- Reconcile route references to missing or renamed controllers.
+- Decide whether the business registration schema should remain JSON-column based or move fully to normalized detail tables.
+- Add migrations for dump-only tables that are still used by models, especially individual TIN detail tables and business amendment tables.
+- Remove legacy/demo UBold views and assets that are not used by the application.
+- Replace example tests with feature tests for registration submission, assignment, approval/rejection, permissions, and uploads.
+
+## Development Commands
+
+```bash
+npm run dev
+npm run build
+php artisan test
+php artisan route:list
+```
+

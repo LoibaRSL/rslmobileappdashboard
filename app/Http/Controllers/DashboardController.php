@@ -123,7 +123,7 @@ class DashboardController extends Controller
      */
     private function getRecentBusinessApplications()
     {
-        return BusinessRegistration::with(['contactDetails', 'directorPartners'])
+        return BusinessRegistration::with([])
             ->where('is_sole_trader', false)
             ->orderBy('created_at', 'desc')
             ->limit(7)
@@ -134,7 +134,7 @@ class DashboardController extends Controller
                     'business_name' => $registration->legal_name,
                     'reference_no' => $registration->reference_number,
                     'business_type' => $registration->business_type,
-                    'registration_number' => $registration->registration_number,
+                    //'registration_number' => $registration->registration_number,
                     'status' => $registration->status,
                     'status_badge' => $this->getStatusBadge($registration->status),
                     'date' => $registration->created_at->format('Y-m-d'),

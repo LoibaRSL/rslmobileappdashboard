@@ -1,591 +1,489 @@
 <?php
 
-namespace App\Http\Controllers\DS;
+namespace App\Http\Controllers\ds;
 
 use App\Http\Controllers\Controller;
 use App\Models\TinRegistration;
-use App\Models\User;
-use App\Models\TinAssignmentHistory;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\JsonResponse;
 
 class TinRegistrationDSController extends Controller
 {
     /**
-     * Get dashboard statistics
-     */
-    public function dashboard(Request $request): JsonResponse
-    {
-        $user = auth()->user();
-        
-        $stats = [
-            'total_pending' => TinRegistration::where('status', 'PENDING')->count(),
-            'total_approved' => TinRegistration::where('status', 'APPROVED')->count(),
-            'total_rejected' => TinRegistration::where('status', 'REJECTED')->count(),
-            'total_under_review' => TinRegistration::where('status', 'UNDER_REVIEW')->count(),
-            
-            'assigned_to_me' => TinRegistration::where('assigned_to_user_id', $user->id)
-                ->whereIn('status', ['PENDING', 'UNDER_REVIEW'])
-                ->count(),
-            
-            'my_approved' => TinRegistration::where('assigned_to_user_id', $user->id)
-                ->where('status', 'APPROVED')
-                ->count(),
-            
-            'my_rejected' => TinRegistration::where('assigned_to_user_id', $user->id)
-                ->where('status', 'REJECTED')
-                ->count(),
-            
-            'unassigned' => TinRegistration::whereNull('assigned_to_user_id')
-                ->where('status', 'PENDING')
-                ->count(),
-        ];
-        
-        // Add admin-only stats
-        if ($user->isAdmin()) {
-            $stats['total_ds_users'] = User::whereHas('roles', function($q) {
-                $q->where('name', 'digital_services');
-            })->count();
-            $stats['total_registrations'] = TinRegistration::count();
-            $stats['approval_rate'] = $this->calculateApprovalRate();
-        }
-        
-        return response()->json(['success' => true, 'stats' => $stats]);
-    }
-
-    public function getApproved(Request $request): JsonResponse
-{
-    $perPage = $request->integer('per_page', 15);
-    
-    $registrations = TinRegistration::with(['assignedTo', 'employers', 'files'])
-        ->where('status', 'APPROVED')
-        ->orderBy('updated_at', 'desc')
-        ->paginate($perPage);
-    
-    return response()->json([
-        'success' => true,
-        'data' => $this->formatRegistrationList($registrations)
-    ]);
-}
-
-public function getRejected(Request $request): JsonResponse
-{
-    $perPage = $request->integer('per_page', 15);
-    
-    $registrations = TinRegistration::with(['assignedTo', 'employers', 'files'])
-        ->where('status', 'REJECTED')
-        ->orderBy('updated_at', 'desc')
-        ->paginate($perPage);
-    
-    return response()->json([
-        'success' => true,
-        'data' => $this->formatRegistrationList($registrations)
-    ]);
-}
-    
-    /**
-     * Get unassigned registrations
-     */
-    public function getUnassigned(Request $request): JsonResponse
-    {
-        $perPage = $request->integer('per_page', 15);
-        
-        $registrations = TinRegistration::with(['employers', 'files'])
-            ->unassigned()
-            ->orderBy('created_at', 'asc')
-            ->paginate($perPage);
-        
-        return response()->json([
-            'success' => true,
-            'data' => $this->formatRegistrationList($registrations)
-        ]);
-    }
-    
-    /**
-     * Get registrations assigned to current user
-     */
-    public function getMyAssignments(Request $request): JsonResponse
-    {
-        $user = auth()->user();
-        $status = $request->get('status');
-        
-        $query = TinRegistration::with(['employers', 'files'])
-            ->assignedToUser($user->id);
-        
-        if ($status) {
-            $query->where('status', strtoupper($status));
-        }
-        
-        $perPage = $request->integer('per_page', 15);
-        $registrations = $query->orderBy('assigned_at', 'desc')->paginate($perPage);
-        
-        return response()->json([
-            'success' => true,
-            'data' => $this->formatRegistrationList($registrations)
-        ]);
-    }
-    
-    /**
-     * Get all registrations (admin only)
+     * Get all registrations for DataTable
      */
     public function getAllRegistrations(Request $request): JsonResponse
     {
         $user = auth()->user();
         
-        if (!$user->isAdmin()) {
+        // Check if user has permission to view registrations
+        if (!$user->hasPermission('registration.view')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Admin access required'
+                'message' => 'You do not have permission to view registrations'
             ], 403);
         }
         
-        $query = TinRegistration::with(['assignedTo', 'employers', 'files']);
+        $query = TinRegistration::query();
+        
+        // Digital Services can see all registrations
+        // Other roles might see only approved or based on their permissions
+        if (!$user->hasPermission('registration.approve') && !$user->hasRole('admin')) {
+            // Non-approvers might only see approved registrations or their assigned ones
+            $query->where('status', 'APPROVED');
+        }
         
         // Apply filters
-        if ($request->has('status')) {
-            $query->where('status', strtoupper($request->status));
-        }
-        
-        if ($request->has('assigned_to')) {
-            $query->where('assigned_to_user_id', $request->assigned_to);
-        }
-        
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('tin', 'LIKE', "%{$search}%")
-                  ->orWhere('ref', 'LIKE', "%{$search}%")
-                  ->orWhere('surname', 'LIKE', "%{$search}%")
-                  ->orWhere('forenames', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%");
+                $q->where('ref', 'like', "%{$search}%")
+                  ->orWhere('tin', 'like', "%{$search}%")
+                  ->orWhere('surname', 'like', "%{$search}%")
+                  ->orWhere('forenames', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
         
-        $perPage = $request->integer('per_page', 15);
-        $registrations = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        if ($request->filled('status')) {
+            $query->where('status', strtoupper($request->status));
+        }
+        
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        if ($request->filled('assigned_to') && $request->assigned_to !== '') {
+            $query->where('assigned_to', $request->assigned_to);
+        }
+        
+        $total = $query->count();
+        
+        // Apply pagination for DataTables
+        $start = $request->get('start', 0);
+        $length = $request->get('length', 25);
+        $orderColumn = $request->get('order')[0]['column'] ?? 7;
+        $orderDirection = $request->get('order')[0]['dir'] ?? 'desc';
+        
+        $columns = ['id', 'ref', 'tin', 'surname', 'email', 'assigned_to', 'status', 'created_at'];
+        $orderBy = $columns[$orderColumn] ?? 'created_at';
+        
+        $registrations = $query->orderBy($orderBy, $orderDirection)
+            ->skip($start)
+            ->take($length)
+            ->get();
+        
+        $data = $registrations->map(function($reg) use ($user) {
+            return [
+                'id' => $reg->id,
+                'ref' => $reg->ref,
+                'tin' => $reg->tin ?? 'N/A',
+                'full_name' => $this->getFullName($reg),
+                'email' => $reg->email,
+                'assigned_to' => $this->getAssignedToName($reg),
+                'status' => $reg->status,
+                'submitted_at' => $reg->created_at?->format('Y-m-d H:i:s'),
+                'can_approve' => $user->hasPermission('registration.approve'),
+                'can_reject' => $user->hasPermission('registration.reject'),
+            ];
+        });
         
         return response()->json([
-            'success' => true,
-            'data' => $this->formatRegistrationList($registrations)
+            'data' => $data,
+            'recordsTotal' => TinRegistration::count(),
+            'recordsFiltered' => $total,
+            'draw' => intval($request->get('draw', 1)),
         ]);
     }
     
     /**
      * Get single registration details
      */
-    public function show(int $id): JsonResponse
+    public function showRegistration($id): JsonResponse
     {
-        $registration = TinRegistration::with([
-            'assignedTo',
-            'employers',
-            'files',
-            'phoneDetails',
-            'bankingDetails',
-            'mobileMoneyDetails',
-            'assignmentHistory.assignedBy',
-            'assignmentHistory.assignedTo'
-        ])->findOrFail($id);
-        
         $user = auth()->user();
         
-        // Check authorization
-        if (!$user->isAdmin() && 
-            $registration->assigned_to_user_id !== null && 
-            $registration->assigned_to_user_id !== $user->id) {
+        if (!$user->hasPermission('registration.view')) {
             return response()->json([
                 'success' => false,
-                'message' => 'You do not have permission to view this registration'
+                'message' => 'You do not have permission to view registration details'
             ], 403);
         }
         
+        $registration = TinRegistration::findOrFail($id);
+        
         return response()->json([
-            'success' => true,
-            'registration' => $this->formatRegistrationDetail($registration)
+            'registration' => [
+                'id' => $registration->id,
+                'ref' => $registration->ref,
+                'tin' => $registration->tin ?? 'Not assigned',
+                'title' => $registration->title,
+                'surname' => $registration->surname,
+                'forenames' => $registration->forenames,
+                'full_name' => $this->getFullName($registration),
+                'maiden_name' => $registration->maiden_name ?? 'N/A',
+                'date_of_birth' => $registration->date_of_birth,
+                'email' => $registration->email,
+                'phone_number' => $registration->phone_number ?? 'N/A',
+                'marital_status' => $this->formatMaritalStatus($registration->marital_status),
+                'spouse_name' => $registration->spouse_name ?? 'N/A',
+                'spouse_tin' => $registration->spouse_tin ?? 'N/A',
+                'status' => $registration->status,
+                'remarks' => $registration->remarks ?? 'N/A',
+                'submitted_at' => $registration->created_at?->format('Y-m-d H:i:s'),
+                'can_approve' => $user->hasPermission('registration.approve'),
+                'can_reject' => $user->hasPermission('registration.reject'),
+                'physical_address' => $this->getPhysicalAddress($registration),
+                'postal_address' => $this->getPostalAddress($registration),
+                'bank_details' => $this->getBankDetails($registration),
+                'files' => $this->getFiles($registration),
+                'registration_type' => $registration->registration_type,
+                'receive_date' => $registration->receive_date,
+                'effective_date' => $registration->effective_date,
+                'country_of_birth' => $registration->country_of_birth,
+                'country_of_citizenship' => $registration->country_of_citizenship,
+                'country_of_residence' => $registration->country_of_residence,
+            ]
         ]);
     }
     
     /**
-     * Assign registration to self
+     * Approve a registration
      */
-    public function assignToSelf(int $id): JsonResponse
+    public function approveRegistration($id, Request $request): JsonResponse
     {
         $user = auth()->user();
         
-        DB::beginTransaction();
-        
-        try {
-            $registration = TinRegistration::findOrFail($id);
-            
-            if (!$registration->canBeAssigned()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This registration cannot be assigned (already assigned or not pending)'
-                ], 422);
-            }
-            
-            $registration->update([
-                'assigned_to_user_id' => $user->id,
-                'assigned_at' => now(),
-                'status' => 'UNDER_REVIEW'
-            ]);
-            
-            // Create history record
-            TinAssignmentHistory::create([
-                'tin_registration_id' => $registration->id,
-                'assigned_by' => $user->id,
-                'assigned_to' => $user->id,
-                'action' => 'assign',
-                'notes' => 'Assigned to self for review'
-            ]);
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Registration assigned to you successfully'
-            ]);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Assignment failed: ' . $e->getMessage());
+        if (!$user->hasPermission('registration.approve')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign registration',
-                'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
-    }
-    
-    /**
-     * Assign registration to another DS user (admin only)
-     */
-    public function assignToUser(Request $request, int $id): JsonResponse
-    {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'notes' => 'nullable|string|max:500'
-        ]);
-        
-        $currentUser = auth()->user();
-        
-        if (!$currentUser->isAdmin()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only administrators can assign to other users'
+                'message' => 'You do not have permission to approve registrations'
             ], 403);
         }
         
-        DB::beginTransaction();
+        $registration = TinRegistration::findOrFail($id);
         
-        try {
-            $registration = TinRegistration::findOrFail($id);
-            $targetUser = User::findOrFail($request->user_id);
-            
-            if (!$targetUser->isDigitalServices()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Can only assign to Digital Services users'
-                ], 422);
-            }
-            
-            $oldAssignee = $registration->assigned_to_user_id;
-            
-            $registration->update([
-                'assigned_to_user_id' => $targetUser->id,
-                'assigned_at' => now(),
-                'status' => 'UNDER_REVIEW'
-            ]);
-            
-            TinAssignmentHistory::create([
-                'tin_registration_id' => $registration->id,
-                'assigned_by' => $currentUser->id,
-                'assigned_to' => $targetUser->id,
-                'action' => $oldAssignee ? 'reassign' : 'assign',
-                'previous_assigned_to' => $oldAssignee,
-                'notes' => $request->notes ?? "Assigned by {$currentUser->name}"
-            ]);
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => "Registration assigned to {$targetUser->name} successfully"
-            ]);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Assignment failed: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to assign registration'
-            ], 500);
-        }
-    }
-    
-    /**
-     * Approve registration
-     */
-    public function approve(Request $request, int $id): JsonResponse
-    {
-        $request->validate([
-            'tin' => 'required|string|unique:tin_registrations,tin,' . $id,
-            'remarks' => 'nullable|string'
+        $registration->update([
+            'status' => 'APPROVED',
+            'remarks' => $request->remarks ?? 'Registration approved by administrator. Registration submitted successfully',
+            'updated_at' => now(),
         ]);
         
-        $user = auth()->user();
-        
-        DB::beginTransaction();
-        
-        try {
-            $registration = TinRegistration::findOrFail($id);
-            
-            if (!$user->isAdmin() && $registration->assigned_to_user_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You can only approve registrations assigned to you'
-                ], 403);
-            }
-            
-            $registration->update([
-                'tin' => $request->tin,
-                'status' => 'APPROVED',
-                'remarks' => $request->remarks,
-                'updated_at' => now()
-            ]);
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Registration approved successfully',
-                'tin' => $request->tin
-            ]);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Approval failed: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to approve registration'
-            ], 500);
-        }
-    }
-    
-    /**
-     * Reject registration
-     */
-    public function reject(Request $request, int $id): JsonResponse
-    {
-        $request->validate([
-            'remarks' => 'required|string|min:10'
+        return response()->json([
+            'success' => true,
+            'message' => 'Registration approved successfully'
         ]);
-        
-        $user = auth()->user();
-        
-        DB::beginTransaction();
-        
-        try {
-            $registration = TinRegistration::findOrFail($id);
-            
-            if (!$user->isAdmin() && $registration->assigned_to_user_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You can only reject registrations assigned to you'
-                ], 403);
-            }
-            
-            $registration->update([
-                'status' => 'REJECTED',
-                'remarks' => $request->remarks,
-                'updated_at' => now()
-            ]);
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Registration rejected'
-            ]);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to reject registration'
-            ], 500);
-        }
     }
     
     /**
-     * Get all DS users for dropdown (admin only)
+     * Reject a registration
      */
-    public function getDSUsers(): JsonResponse
+    public function rejectRegistration($id, Request $request): JsonResponse
     {
         $user = auth()->user();
         
-        if (!$user->isAdmin() && !$user->isDigitalServices()) {
+        if (!$user->hasPermission('registration.reject')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized'
+                'message' => 'You do not have permission to reject registrations'
             ], 403);
         }
         
-        $users = User::whereHas('roles', function($query) {
-                $query->where('name', 'digital_services');
-            })
-            ->select('id', 'name', 'email', 'department')
-            ->orderBy('name')
-            ->get();
+        $request->validate([
+            'remarks' => 'required|string|min:5'
+        ]);
+        
+        $registration = TinRegistration::findOrFail($id);
+        
+        $registration->update([
+            'status' => 'REJECTED',
+            'remarks' => 'Registration rejected. Reason: ' . $request->remarks,
+            'updated_at' => now(),
+        ]);
         
         return response()->json([
             'success' => true,
-            'users' => $users
+            'message' => 'Registration rejected successfully'
         ]);
     }
     
     /**
-     * Get assignment history for a registration
+     * Assign registration to a DS user
      */
-    public function getAssignmentHistory(int $id): JsonResponse
+    public function assignRegistration($id, Request $request): JsonResponse
     {
-        $history = TinAssignmentHistory::with(['assignedBy', 'assignedTo'])
-            ->where('tin_registration_id', $id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = auth()->user();
+        
+        if (!$user->hasPermission('registration.approve') && !$user->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to assign registrations'
+            ], 403);
+        }
+        
+        $request->validate([
+            'assigned_to' => 'required|exists:users,id'
+        ]);
+        
+        $registration = TinRegistration::findOrFail($id);
+        
+        $registration->update([
+            'assigned_to' => $request->assigned_to,
+            'status' => 'UNDER_REVIEW',
+            'updated_at' => now(),
+        ]);
         
         return response()->json([
             'success' => true,
-            'history' => $history
+            'message' => 'Registration assigned successfully'
         ]);
     }
     
     /**
      * Export registrations to CSV
      */
-    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function export(Request $request)
     {
         $user = auth()->user();
         
-        $query = TinRegistration::with(['assignedTo']);
-        
-        if (!$user->isAdmin()) {
-            $query->assignedToUser($user->id);
+        if (!$user->hasPermission('registration.view')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
         
-        if ($request->status) {
-            $query->where('status', $request->status);
+        $query = TinRegistration::query();
+        
+        // Apply filters
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('ref', 'like', "%{$search}%")
+                  ->orWhere('tin', 'like', "%{$search}%")
+                  ->orWhere('surname', 'like', "%{$search}%")
+                  ->orWhere('forenames', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
         }
         
-        if ($request->date_from) {
+        if ($request->filled('status')) {
+            $query->where('status', strtoupper($request->status));
+        }
+        
+        if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
         
-        if ($request->date_to) {
+        if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
         
-        $registrations = $query->get();
+        if ($request->filled('assigned_to') && $request->assigned_to !== '') {
+            $query->where('assigned_to', $request->assigned_to);
+        }
         
-        $filename = "tin_registrations_" . now()->format('Ymd_His') . ".csv";
+        $registrations = $query->orderBy('created_at', 'desc')->get();
         
-        return response()->streamDownload(function() use ($registrations) {
-            $handle = fopen('php://output', 'w');
+        $filename = 'tin_registrations_' . date('Y-m-d_His') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$filename}",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+        
+        $callback = function() use ($registrations) {
+            $file = fopen('php://output', 'w');
             
-            // Headers
-            fputcsv($handle, [
-                'ID', 'Reference', 'TIN', 'Full Name', 'Email', 'Status', 
-                'Assigned To', 'Submitted Date', 'Remarks'
+            // Add UTF-8 BOM for Excel compatibility
+            fputs($file, "\xEF\xBB\xBF");
+            
+            // CSV Headers
+            fputcsv($file, [
+                'ID', 'Reference', 'TIN', 'Title', 'Surname', 'Forenames', 'Maiden Name',
+                'Email', 'Phone', 'Date of Birth', 'Marital Status', 'Spouse Name', 
+                'Physical Address', 'Postal Address', 'Status', 'Submitted Date', 'Remarks'
             ]);
             
             foreach ($registrations as $reg) {
-                fputcsv($handle, [
+                fputcsv($file, [
                     $reg->id,
                     $reg->ref,
-                    $reg->tin ?? 'Not assigned',
-                    $reg->forenames . ' ' . $reg->surname,
+                    $reg->tin ?? 'N/A',
+                    $reg->title,
+                    $reg->surname,
+                    $reg->forenames,
+                    $reg->maiden_name ?? 'N/A',
                     $reg->email,
+                    $reg->phone_number ?? 'N/A',
+                    $reg->date_of_birth,
+                    $this->formatMaritalStatus($reg->marital_status),
+                    $reg->spouse_name ?? 'N/A',
+                    $this->getPhysicalAddress($reg),
+                    $this->getPostalAddress($reg),
                     $reg->status,
-                    $reg->assignedTo?->name ?? 'Unassigned',
-                    $reg->created_at->format('Y-m-d H:i'),
-                    $reg->remarks
+                    $reg->created_at?->format('Y-m-d H:i:s'),
+                    $reg->remarks ?? 'N/A',
                 ]);
             }
             
-            fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
     }
     
-    // Private helper methods
-    private function formatRegistrationList($registrations): array
+    /**
+     * Get DS users for filter (users with digital_services or admin role)
+     */
+    public function getDsUsers(): JsonResponse
     {
-        return $registrations->map(function($reg) {
-            return [
+        $users = \App\Models\User::whereHas('roles', function($query) {
+            $query->whereIn('name', ['digital_services', 'admin']);
+        })->get();
+        
+        return response()->json([
+            'success' => true,
+            'users' => $users->map(fn($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+            ])
+        ]);
+    }
+    
+    /**
+     * Get dashboard statistics
+     */
+    public function getStats(): JsonResponse
+    {
+        $user = auth()->user();
+        
+        if (!$user->hasPermission('registration.dashboard')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+        
+        $stats = [
+            'total' => TinRegistration::count(),
+            'pending' => TinRegistration::where('status', 'PENDING')->count(),
+            'approved' => TinRegistration::where('status', 'APPROVED')->count(),
+            'rejected' => TinRegistration::where('status', 'REJECTED')->count(),
+            'under_review' => TinRegistration::where('status', 'UNDER_REVIEW')->count(),
+            'today' => TinRegistration::whereDate('created_at', today())->count(),
+            'this_week' => TinRegistration::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+            'this_month' => TinRegistration::whereMonth('created_at', now()->month)->count(),
+        ];
+        
+        // Recent registrations
+        $recent = TinRegistration::orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(fn($reg) => [
                 'id' => $reg->id,
                 'ref' => $reg->ref,
-                'tin' => $reg->tin,
-                'full_name' => $reg->forenames . ' ' . $reg->surname,
-                'email' => $reg->email,
+                'full_name' => $this->getFullName($reg),
                 'status' => $reg->status,
-                'submitted_at' => $reg->created_at->format('Y-m-d H:i:s'),
-                'assigned_to' => $reg->assignedTo?->name ?? 'Unassigned',
-                'employers_count' => $reg->employers?->count() ?? 0,
-                'files_count' => $reg->files?->count() ?? 0
-            ];
-        })->toArray();
+                'submitted_at' => $reg->created_at?->format('Y-m-d H:i:s'),
+            ]);
+        
+        return response()->json([
+            'success' => true,
+            'stats' => $stats,
+            'recent' => $recent,
+        ]);
     }
     
-    private function formatRegistrationDetail($registration): array
+    // ========== Helper Methods ==========
+    
+    private function getFullName($registration): string
+    {
+        return trim($registration->title . ' ' . $registration->forenames . ' ' . $registration->surname);
+    }
+    
+    private function getAssignedToName($registration): string
+    {
+        if (empty($registration->assigned_to)) {
+            return 'Unassigned';
+        }
+        
+        $user = \App\Models\User::find($registration->assigned_to);
+        return $user?->name ?? 'Unknown';
+    }
+    
+    private function getPhysicalAddress($registration): string
+    {
+        $parts = array_filter([
+            $registration->street_name,
+            $registration->village,
+            $registration->town,
+            $registration->physical_district,
+        ]);
+        
+        return implode(', ', $parts) ?: 'Not provided';
+    }
+    
+    private function getPostalAddress($registration): string
+    {
+        $parts = array_filter([
+            $registration->post_address1,
+            $registration->post_type && $registration->post_number ? 
+                $registration->post_type . ' ' . $registration->post_number : null,
+            $registration->post_city,
+        ]);
+        
+        return implode(', ', $parts) ?: 'Not provided';
+    }
+    
+    private function getBankDetails($registration): array
     {
         return [
-            'id' => $registration->id,
-            'ref' => $registration->ref,
-            'tin' => $registration->tin,
-            'document_locator' => $registration->document_locator,
-            'receive_date' => $registration->receive_date,
-            'registration_type' => $registration->registration_type,
-            'title' => $registration->title,
-            'surname' => $registration->surname,
-            'forenames' => $registration->forenames,
-            'maiden_name' => $registration->maiden_name,
-            'date_of_birth' => $registration->date_of_birth,
-            'email' => $registration->email,
-            'phone_details' => $registration->phoneDetails,
-            'employers' => $registration->employers,
-            'banking_details' => $registration->bankingDetails,
-            'mobile_money_details' => $registration->mobileMoneyDetails,
-            'status' => $registration->status,
-            'remarks' => $registration->remarks,
-            'assigned_to' => $registration->assignedTo?->name,
-            'assigned_at' => $registration->assigned_at,
-            'submitted_at' => $registration->created_at->format('Y-m-d H:i:s'),
-            'files' => $registration->files->map(function($file) {
-                return [
-                    'type' => $file->file_type,
-                    'name' => $file->file_name,
-                    'url' => Storage::url($file->file_path)
-                ];
-            }),
-            'assignment_history' => $registration->assignmentHistory->map(function($history) {
-                return [
-                    'action' => $history->action,
-                    'assigned_by' => $history->assignedBy?->name,
-                    'assigned_to' => $history->assignedTo?->name,
-                    'notes' => $history->notes,
-                    'created_at' => $history->created_at->format('Y-m-d H:i:s')
-                ];
-            })
+            'bank_name' => $registration->bank_name ?? 'Not provided',
+            'bank_country' => $registration->bank_country ?? 'Not provided',
+            'mobile_money_type' => $registration->mobile_money_type ?? null,
+            'mobile_money_number' => $registration->mobile_money_number ?? null,
         ];
     }
     
-    private function calculateApprovalRate(): float
+    private function getFiles($registration): array
     {
-        $total = TinRegistration::whereIn('status', ['APPROVED', 'REJECTED'])->count();
-        if ($total === 0) return 0;
+        $files = [];
+        $fileColumns = [
+            'lesotho_id_path' => 'Lesotho National ID',
+            'passport_path' => 'Passport',
+            'other_id_path' => 'Other Identification',
+            'foreign_id_path' => 'Foreign ID',
+            'antenuptial_path' => 'Antenuptial Agreement',
+        ];
         
-        $approved = TinRegistration::where('status', 'APPROVED')->count();
-        return round(($approved / $total) * 100, 2);
+        foreach ($fileColumns as $column => $label) {
+            if (!empty($registration->$column)) {
+                $files[] = [
+                    'file_path' => $registration->$column,
+                    'file_name' => $label,
+                    'file_type' => pathinfo($registration->$column, PATHINFO_EXTENSION),
+                ];
+            }
+        }
+        
+        return $files;
+    }
+    
+    private function formatMaritalStatus($status): string
+    {
+        $statuses = [
+            'SING' => 'Single',
+            'MARR' => 'Married',
+            'DIVO' => 'Divorced',
+            'SEPA' => 'Separated',
+            'WIDO' => 'Widowed',
+        ];
+        
+        return $statuses[$status] ?? $status ?? 'Not specified';
     }
 }

@@ -15,18 +15,35 @@ use App\Http\Controllers\AmendmentsController;
 use App\Http\Controllers\ReturnsController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\DS\ViewController;
+use App\Http\Controllers\Api\DS\RegistrationApiController;
+use App\Http\Controllers\ds\TinRegistrationDSController;
+
+
+
+
+
+
+
+
+
+// FIX THE BUSINESS REGISTRATION GROUP:
+Route::prefix('business-registration')->group(function () {
+    // Public API Routes (No authentication required)
+    Route::post('/business-registration', [PublicBusinessRegistrationController::class, 'store']);
+    Route::get('/business-registration/{id}', [PublicBusinessRegistrationController::class, 'show']);
+    Route::post('/amend', [BusinessAmendmentController::class, 'store']);
+});
 
 
 // ============ DIGITAL SERVICES WEB ROUTES (Views) ============
 Route::middleware(['wso2.auth'])->prefix('ds')->name('ds.')->group(function () {
-    // View Routes (return Blade views)
     Route::get('/dashboard', [ViewController::class, 'dashboard'])->name('dashboard');
     Route::get('/registrations/all', [ViewController::class, 'allRegistrations'])->name('registrations.all');
     Route::get('/registrations/unassigned', [ViewController::class, 'unassigned'])->name('registrations.unassigned');
     Route::get('/registrations/my-assignments', [ViewController::class, 'myAssignments'])->name('registrations.my-assignments');
     Route::get('/registrations/approved', [ViewController::class, 'approved'])->name('registrations.approved');
     Route::get('/registrations/rejected', [ViewController::class, 'rejected'])->name('registrations.rejected');
-    
+
     // Admin only views
     Route::middleware(['admin'])->group(function () {
         Route::get('/users', [ViewController::class, 'users'])->name('users.index');
@@ -36,7 +53,7 @@ Route::middleware(['wso2.auth'])->prefix('ds')->name('ds.')->group(function () {
 });
 
 // ============ DIGITAL SERVICES API ROUTES (for AJAX calls) ============
-Route::middleware(['wso2.auth', 'digital.services'])->prefix('api/ds')->name('ds.api.')->group(function () {
+Route::middleware(['wso2.auth'])->prefix('api/ds')->name('ds.api.')->group(function () {
     // Dashboard API
     Route::get('/dashboard', [TinRegistrationDSController::class, 'dashboard'])->name('dashboard');
     Route::get('/users/ds-users', [TinRegistrationDSController::class, 'getDSUsers'])->name('users.ds-users');
@@ -173,19 +190,20 @@ Route::prefix('tin/business')->name('tin.business.')->group(function () {
     });
 });
 
-// Public API Routes (No authentication required)
-Route::post('/register-tin', [TinRegistrationController::class, 'register']);
-Route::post('/business-registration', [PublicBusinessRegistrationController::class, 'store']);
-Route::get('/business-registrations', [PublicBusinessRegistrationController::class, 'index']);
-Route::get('/business-registration/{id}', [PublicBusinessRegistrationController::class, 'show']);
-Route::post('/amend', [BusinessAmendmentController::class, 'store']);
-Route::post('/register', [TinRegistrationsController::class, 'register']);
-Route::post('/verify-email', [TinRegistrationsController::class, 'verifyEmail']);
-Route::get('/status/{ref}', [TinRegistrationsController::class, 'checkStatus']);
-Route::get('/registration/{id}', [TinRegistrationsController::class, 'getRegistration']);
-Route::get('/user-data/{tin}', [TinRegistrationsController::class, 'getUserDataByTin']);
-Route::post('/amend', [TinRegistrationsController::class, 'amend']);
-Route::get('/check-amendment/{tin}', [TinRegistrationsController::class, 'checkPendingAmendment']);
+
+
+
+Route::prefix('tin-registration')->group(function () {
+    Route::post('/register', [TinRegistrationsController::class, 'register']);
+    Route::post('/verify-email', [TinRegistrationsController::class, 'verifyEmail']);
+    Route::get('/status/{ref}', [TinRegistrationsController::class, 'checkStatus']);
+    Route::get('/registration/{id}', [TinRegistrationsController::class, 'getRegistration']);
+         // Amendment routes
+    Route::get('/user-data/{tin}', [TinRegistrationsController::class, 'getUserDataByTin']);
+    Route::post('/amend', [TinRegistrationsController::class, 'amend']);
+    Route::get('/check-amendment/{tin}', [TinRegistrationsController::class, 'checkPendingAmendment']);
+
+});
 
 // Static Routes (UI Views)
 Route::get('/auth/delete-account', function () {

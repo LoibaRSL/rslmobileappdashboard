@@ -9,6 +9,15 @@ use App\Http\Controllers\TinRegistrationsController;
 use App\Http\Controllers\API\TINAmendmentController;
 
 use App\Models\Role;
+use App\Http\Controllers\Api\DS\RegistrationApiController;
+
+Route::prefix('ds')->group(function () {
+    Route::get('/registrations/all', [RegistrationApiController::class, 'allRegistrations'])->name('ds.api.registrations.all');
+    Route::get('/registrations/{id}', [RegistrationApiController::class, 'showRegistration']);
+    Route::get('/export', [RegistrationApiController::class, 'export'])->name('ds.api.export');
+    Route::get('/users/ds-users', [RegistrationApiController::class, 'getDsUsers'])->name('ds.api.users.ds-users');
+});
+
 
 
 // API routes for AJAX calls (protected by auth)
@@ -19,8 +28,7 @@ Route::middleware(['wso2.auth'])->group(function () {
 });
 
 
-Route::middleware('api')->group(function () {
-Route::post('/register-tin', [TinRegistrationController::class, 'register']);
+//Route::post('/register-tin', [TinRegistrationController::class, 'register']);
 Route::post('/business-registration', [BusinessRegistrationController::class, 'store']);
 Route::get('/business-registrations', [BusinessRegistrationController::class, 'index']);
 Route::get('/business-registration/{id}', [BusinessRegistrationController::class, 'show']);
@@ -49,7 +57,6 @@ Route::prefix('admin/tin-registrations')->group(function () {
 
 
 
-});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-tin', [TINAmendmentController::class, 'getMyTIN']);

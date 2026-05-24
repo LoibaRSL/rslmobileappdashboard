@@ -3,7 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\DigitalServicesMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,9 +14,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+
+         // 1. CSRF EXCEPTIONS 
+    $middleware->validateCsrfTokens(except: [
+        'tin-registration/*',
+        'business-registration/*',
+    ]);
+
         // Register middleware aliases
         $middleware->alias([
             'wso2.auth' => \App\Http\Middleware\WSO2Authenticate::class,
+            'admin' => AdminMiddleware::class,
             'check.permission' => CheckPermission::class,
             'digital.services' => DigitalServicesMiddleware::class,
         ]);
