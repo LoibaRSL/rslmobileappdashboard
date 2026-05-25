@@ -87,11 +87,6 @@
             <div class="modal-body">
                 <input type="hidden" id="approve-id">
                 <div class="mb-3">
-                    <label class="form-label">TIN Number <span class="text-danger">*</span></label>
-                    <input type="text" id="approve-tin" class="form-control" placeholder="Enter TIN number">
-                    <small class="text-muted">Format: INDYYYYMMDDXXXX (e.g., IND202605200001)</small>
-                </div>
-                <div class="mb-3">
                     <label class="form-label">Remarks (Optional)</label>
                     <textarea id="approve-remarks" class="form-control" rows="3" placeholder="Add approval notes..."></textarea>
                 </div>
@@ -484,7 +479,6 @@ $(document).ready(function() {
     function showApproveModal(id, type = 'individual') {
         $('#approve-id').val(id);
         $('#approve-id').data('type', type);
-        $('#approve-tin').val('');
         $('#approve-remarks').val('');
         $('#approveModal').modal('show');
     }
@@ -518,23 +512,9 @@ $(document).ready(function() {
         let id = $('#approve-id').val();
         let type = $('#approve-id').data('type') || 'individual';
         let baseUrl = type === 'business' ? '{{ url('api/ds/business-registrations') }}' : '{{ url('api/ds/registrations') }}';
-        let tin = $('#approve-tin').val();
         let remarks = $('#approve-remarks').val();
         
-        if (!tin) {
-            Swal.fire('Error', 'Please enter a TIN number', 'error');
-            return;
-        }
-        
-        // TIN format validation
-        let tinPattern = /^IND\d{12}$/;
-        if (type !== 'business' && !tinPattern.test(tin)) {
-            Swal.fire('Error', 'TIN format should be IND followed by 12 digits (e.g., IND202605200001)', 'error');
-            return;
-        }
-        
         $.post(`${baseUrl}/${id}/approve`, { 
-            tin: tin, 
             remarks: remarks 
         })
         .done(function(response) {
