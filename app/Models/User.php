@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -82,6 +84,8 @@ class User extends Authenticatable
      */
     public function hasRole($role): bool
     {
+        $this->loadMissing('roles');
+
         if (is_string($role)) {
             return $this->roles->contains('name', $role);
         }
@@ -106,6 +110,8 @@ class User extends Authenticatable
      */
     public function hasPermission($permission): bool
     {
+        $this->loadMissing('roles.permissions');
+
         // Admin has all permissions
         if ($this->hasRole('admin')) {
             return true;
@@ -312,12 +318,45 @@ class User extends Authenticatable
      */
     public function getInitialsAttribute(): string
     {
-        $words = explode(' ', $this->name);
-        $initials = '';
-        foreach ($words as $word) {
-            $initials .= strtoupper(substr($word, 0, 1));
+        $name = trim($this->name ?: $this->username ?: $this->email ?: 'User');
+        $words = preg_split('/\s+/', $name) ?: [];
+        $initials = collect($words)
+            ->filter()
+            ->take(2)
+            ->map(fn ($word) => Str::upper(Str::substr($word, 0, 1)))
+            ->implode('');
+
+        if ($initials !== '') {
+            return $initials;
         }
-        return $initials;
+
+        return Str::upper(Str::substr($name, 0, 2));
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        $attributes = $this->wso2_attributes ?? [];
+        $avatar = $attributes['picture']
+            ?? $attributes['avatar']
+            ?? $attributes['photo']
+            ?? $attributes['profile_picture']
+            ?? $attributes['profilePhoto']
+            ?? $attributes['thumbnail']
+            ?? null;
+
+        if (!$avatar) {
+            return null;
+        }
+
+        if (filter_var($avatar, FILTER_VALIDATE_URL)) {
+            return $avatar;
+        }
+
+        if (Str::startsWith($avatar, ['/images/', 'images/', '/storage/', 'storage/'])) {
+            return asset(ltrim($avatar, '/'));
+        }
+
+        return Storage::url($avatar);
     }
 
     /**
@@ -328,5 +367,15 @@ class User extends Authenticatable
     public function isWSO2User(): bool
     {
         return !is_null($this->wso2_id);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    public function isDigitalServices(): bool
+    {
+        return $this->hasRole(['digital_services', 'admin']);
     }
 }

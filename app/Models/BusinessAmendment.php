@@ -15,6 +15,7 @@ class BusinessAmendment extends Model
 
     protected $fillable = [
         'business_registration_id',
+        'tin',
         'original_tin',
         'amendment_tin',
         'reference_number',
@@ -35,6 +36,9 @@ class BusinessAmendment extends Model
         'rejection_reason',
         'applied_at',
         'applied_by',
+        'assigned_to',
+        'assigned_to_user_id',
+        'assigned_at',
         'submission_ip',
         'submission_device', 
     ];
@@ -45,6 +49,7 @@ class BusinessAmendment extends Model
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
         'applied_at' => 'datetime',
+        'assigned_at' => 'datetime',
         'amended_sections' => 'array',
         'amendment_data' => 'array',
     ];

@@ -86,6 +86,7 @@ class BusinessRegistrationController extends Controller
                 'trade_details' => $applicationData['trade_details'] ?? null,
                 'principal_details' => $applicationData['principal_details'] ?? null,
                 'directors_partners' => $applicationData['directors_partners'] ?? null,
+                'bank_mobile_money' => $this->extractBankMobileMoney($applicationData),
                 'accountant_details' => $this->extractAccountantDetails($applicationData),
                 'nominated_officer_details' => $this->extractNominatedOfficerDetails($applicationData),
                 'phone_details' => $phoneDetails,
@@ -498,6 +499,34 @@ private function processAntenuptialFile(Request $request, BusinessRegistration $
         } */
         
         return $phoneDetails;
+    }
+
+    private function extractBankMobileMoney(array $data): ?array
+    {
+        $bankMobileMoney = $data['bank_mobile_money'] ?? $data['bankMobileMoney'] ?? [];
+
+        $bankDetails = $bankMobileMoney['bank_details']
+            ?? $bankMobileMoney['bankDetails']
+            ?? $data['bank_details']
+            ?? $data['bankDetails']
+            ?? [];
+
+        $mobileMoneyDetails = $bankMobileMoney['mobile_money_details']
+            ?? $bankMobileMoney['mobileMoneyDetails']
+            ?? $bankMobileMoney['mobile_money']
+            ?? $bankMobileMoney['mobileMoney']
+            ?? $data['mobile_money_details']
+            ?? $data['mobileMoneyDetails']
+            ?? [];
+
+        if (empty($bankDetails) && empty($mobileMoneyDetails)) {
+            return null;
+        }
+
+        return [
+            'bank_details' => $bankDetails,
+            'mobile_money_details' => $mobileMoneyDetails,
+        ];
     }
 
     private function extractAccountantDetails(array $data): array

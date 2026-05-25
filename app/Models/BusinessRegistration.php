@@ -37,6 +37,7 @@ class BusinessRegistration extends Model
         'trade_details',
         'principal_details',
         'directors_partners',
+        'bank_mobile_money',
         'accountant_details',
         'nominated_officer_details',
         'personal_identification',
@@ -66,6 +67,9 @@ class BusinessRegistration extends Model
         'sms_error',
         'submission_ip',
         'submission_device',
+        'assigned_to',
+        'assigned_to_user_id',
+        'assigned_at',
     ];
 
     protected $casts = [
@@ -75,6 +79,7 @@ class BusinessRegistration extends Model
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
         'sms_sent_at' => 'datetime',
+        'assigned_at' => 'datetime',
         'is_sole_trader' => 'boolean',
         'declaration_accepted' => 'boolean',
         'has_antenuptial_file' => 'boolean',
@@ -87,6 +92,7 @@ class BusinessRegistration extends Model
         'trade_details' => 'array',
         'principal_details' => 'array',
         'directors_partners' => 'array',
+        'bank_mobile_money' => 'array',
         'accountant_details' => 'array',
         'nominated_officer_details' => 'array',
         'personal_identification' => 'array',

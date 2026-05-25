@@ -16,7 +16,7 @@
                     <i class="ri-inbox-unarchive-line text-primary widget-icon"></i>
                 </div>
                 <h5 class="text-muted fw-normal mt-0" title="Unassigned">Unassigned Submissions</h5>
-                <h3 class="mt-3 mb-1" id="unassigned-count">0</h3>
+                <h3 class="mt-3 mb-1" id="unassigned-count">{{ number_format($stats['pending'] ?? 0) }}</h3>
                 <p class="mb-0 text-muted">
                     <span class="text-nowrap">Awaiting assignment</span>
                 </p>
@@ -46,7 +46,7 @@
                     <i class="ri-checkbox-circle-line text-success widget-icon"></i>
                 </div>
                 <h5 class="text-muted fw-normal mt-0" title="Approved">Approved</h5>
-                <h3 class="mt-3 mb-1" id="approved-count">0</h3>
+                <h3 class="mt-3 mb-1" id="approved-count">{{ number_format($stats['approved'] ?? 0) }}</h3>
                 <p class="mb-0 text-muted">
                     <span class="text-nowrap">Successfully processed</span>
                 </p>
@@ -61,7 +61,7 @@
                     <i class="ri-close-circle-line text-danger widget-icon"></i>
                 </div>
                 <h5 class="text-muted fw-normal mt-0" title="Rejected">Rejected</h5>
-                <h3 class="mt-3 mb-1" id="rejected-count">0</h3>
+                <h3 class="mt-3 mb-1" id="rejected-count">{{ number_format($stats['rejected'] ?? 0) }}</h3>
                 <p class="mb-0 text-muted">
                     <span class="text-nowrap">Returned for corrections</span>
                 </p>
@@ -77,7 +77,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 class="text-white mb-0" id="total-pending">0</h4>
+                        <h4 class="text-white mb-0" id="total-pending">{{ number_format(($stats['pending'] ?? 0) + ($stats['under_review'] ?? 0)) }}</h4>
                         <p class="text-white-50 mb-0">Total Pending</p>
                     </div>
                     <i class="ri-time-line text-white-50 font-24"></i>
@@ -120,7 +120,7 @@
                             <span class="badge bg-primary ms-1" id="my-assignments-badge">0</span>
                         </button>
                     </li>
-                    @if(auth()->user()->isAdmin())
+                    @if(auth()->user()->hasPermission('registration.view'))
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="all-tab" data-bs-toggle="tab" 
                                 data-bs-target="#all" type="button" role="tab">
@@ -173,7 +173,7 @@
                     </div>
 
                     <!-- All Applications Tab (Admin only) -->
-                    @if(auth()->user()->isAdmin())
+                    @if(auth()->user()->hasPermission('registration.view'))
                     <div class="tab-pane fade" id="all" role="tabpanel">
                         <div class="row mb-3">
                             <div class="col-md-3">
@@ -257,7 +257,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Assign to DS User</h5>
+                <h5 class="modal-title" id="assign-modal-title">Assign to DS User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -267,6 +267,7 @@
                     <select class="form-select" id="assign-user-id" required>
                         <option value="">Choose user...</option>
                     </select>
+                    <small class="text-muted">Choose yourself or any other Digital Services user.</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Notes (Optional)</label>
@@ -292,12 +293,6 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="approve-registration-id">
-                <div class="mb-3">
-                    <label class="form-label">TIN Number <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="approve-tin" 
-                           placeholder="Enter TIN number (e.g., IND202605200001)" required>
-                    <small class="text-muted">Format: IND + YYYYMMDD + 4-digit sequence</small>
-                </div>
                 <div class="mb-3">
                     <label class="form-label">Remarks (Optional)</label>
                     <textarea class="form-control" id="approve-remarks" rows="3" 
@@ -357,17 +352,12 @@ $(document).ready(function() {
                 data: null,
                 render: function(data) {
                     return `
-                        <button class="btn btn-sm btn-info view-btn" data-id="${data.id}">
+                        <button class="btn btn-sm btn-info view-btn" data-id="${data.id}" data-type="${data.registration_kind}">
                             <i class="ri-eye-line"></i> View
                         </button>
-                        <button class="btn btn-sm btn-primary assign-self-btn" data-id="${data.id}">
-                            <i class="ri-user-add-line"></i> Assign to Me
-                        </button>
-                        ${isAdmin ? `
-                        <button class="btn btn-sm btn-warning assign-user-btn" data-id="${data.id}">
+                        <button class="btn btn-sm btn-primary assign-user-btn" data-id="${data.id}" data-type="${data.registration_kind}" data-reassign="0">
                             <i class="ri-group-line"></i> Assign
                         </button>
-                        ` : ''}
                     `;
                 }
             }
@@ -405,17 +395,17 @@ $(document).ready(function() {
                 data: null,
                 render: function(data) {
                     let actions = `
-                        <button class="btn btn-sm btn-info view-btn" data-id="${data.id}">
+                        <button class="btn btn-sm btn-info view-btn" data-id="${data.id}" data-type="${data.registration_kind}">
                             <i class="ri-eye-line"></i>
                         </button>
                     `;
                     
                     if (data.status === 'UNDER_REVIEW' || data.status === 'PENDING') {
                         actions += `
-                            <button class="btn btn-sm btn-success approve-btn" data-id="${data.id}">
+                            <button class="btn btn-sm btn-success approve-btn" data-id="${data.id}" data-type="${data.registration_kind}">
                                 <i class="ri-check-line"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger reject-btn" data-id="${data.id}">
+                            <button class="btn btn-sm btn-danger reject-btn" data-id="${data.id}" data-type="${data.registration_kind}">
                                 <i class="ri-close-line"></i>
                             </button>
                         `;
@@ -431,7 +421,7 @@ $(document).ready(function() {
 
     // All Applications Table (Admin only)
     let allTable = null;
-    @if(auth()->user()->isAdmin())
+    @if(auth()->user()->hasPermission('registration.view'))
     allTable = $('#all-table').DataTable({
         processing: true,
         serverSide: true,
@@ -466,7 +456,7 @@ $(document).ready(function() {
             { 
                 data: null,
                 render: function(data) {
-                    return `<button class="btn btn-sm btn-info view-btn" data-id="${data.id}">
+                    return `<button class="btn btn-sm btn-info view-btn" data-id="${data.id}" data-type="${data.registration_kind}">
                                 <i class="ri-eye-line"></i> View
                             </button>`;
                 }
@@ -500,8 +490,8 @@ $(document).ready(function() {
             if (response.success) {
                 $('#unassigned-count').text(response.stats.unassigned);
                 $('#assigned-count').text(response.stats.assigned_to_me);
-                $('#approved-count').text(response.stats.my_approved);
-                $('#rejected-count').text(response.stats.my_rejected);
+                $('#approved-count').text(response.stats.approved ?? response.stats.my_approved ?? 0);
+                $('#rejected-count').text(response.stats.rejected ?? response.stats.my_rejected ?? 0);
                 $('#total-pending').text(response.stats.total_pending);
                 $('#approval-rate').text(response.stats.approval_rate + '%');
                 $('#unassigned-badge').text(response.stats.unassigned);
@@ -513,9 +503,10 @@ $(document).ready(function() {
     // View Registration Details
     $(document).on('click', '.view-btn', function() {
         let id = $(this).data('id');
+        let type = $(this).data('type') || 'individual';
         $('#registrationModal').modal('show');
         
-        $.get(`/api/ds/registrations/${id}`, function(response) {
+        $.get(dsRegistrationUrl(type, id), function(response) {
             if (response.success) {
                 displayRegistrationDetails(response.registration);
             }
@@ -612,8 +603,8 @@ $(document).ready(function() {
                                 <div class="row">
                                     ${reg.files.map(file => `
                                         <div class="col-md-4 mb-2">
-                                            <a href="/storage/${file.url}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                                                <i class="ri-file-pdf-line me-1"></i> ${file.name}
+                                            <a href="${attachmentUrl(reg, file)}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
+                                                <i class="ri-file-pdf-line me-1"></i> ${file.name || file.file_name || file.original_filename || 'Document'}
                                             </a>
                                         </div>
                                     `).join('')}
@@ -655,24 +646,22 @@ $(document).ready(function() {
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         `;
         
-        if (reg.status === 'PENDING' && !reg.assigned_to) {
+        if ((reg.status === 'PENDING' || reg.status === 'UNDER_REVIEW') && (!reg.assigned_to || isAdmin)) {
+            const isReassign = reg.assigned_to && reg.assigned_to !== 'Unassigned';
             actions += `
-                <button type="button" class="btn btn-primary" id="modal-assign-self" data-id="${reg.id}">
-                    <i class="ri-user-add-line"></i> Assign to Me
+                <button type="button" class="btn btn-primary assign-user-btn" data-id="${reg.id}" data-type="${reg.registration_kind}" data-reassign="${isReassign ? '1' : '0'}">
+                    <i class="ri-group-line"></i> ${isReassign ? 'Reassign' : 'Assign'}
                 </button>
-                ${isAdmin ? `
-                <button type="button" class="btn btn-warning" id="modal-assign-user" data-id="${reg.id}">
-                    <i class="ri-group-line"></i> Assign to User
-                </button>
-                ` : ''}
             `;
-        } else if (reg.assigned_to === '${currentUserName}' || isAdmin) {
+        }
+
+        if (reg.assigned_to === '${currentUserName}' || isAdmin) {
             if (reg.status === 'UNDER_REVIEW' || reg.status === 'PENDING') {
                 actions += `
-                    <button type="button" class="btn btn-success" id="modal-approve" data-id="${reg.id}">
+                    <button type="button" class="btn btn-success" id="modal-approve" data-id="${reg.id}" data-type="${reg.registration_kind}">
                         <i class="ri-check-line"></i> Approve
                     </button>
-                    <button type="button" class="btn btn-danger" id="modal-reject" data-id="${reg.id}">
+                    <button type="button" class="btn btn-danger" id="modal-reject" data-id="${reg.id}" data-type="${reg.registration_kind}">
                         <i class="ri-close-line"></i> Reject
                     </button>
                 `;
@@ -682,24 +671,29 @@ $(document).ready(function() {
         $('#modal-actions').html(actions);
         
         // Bind modal actions
-        $('#modal-assign-self').on('click', function() {
-            $('#registrationModal').modal('hide');
-            assignToSelf($(this).data('id'));
-        });
-        
         $('#modal-approve').on('click', function() {
             $('#registrationModal').modal('hide');
-            showApproveModal($(this).data('id'));
+            showApproveModal($(this).data('id'), $(this).data('type'));
         });
         
         $('#modal-reject').on('click', function() {
             $('#registrationModal').modal('hide');
-            showRejectModal($(this).data('id'));
+            showRejectModal($(this).data('id'), $(this).data('type'));
         });
     }
 
     // Assign to Self
-    function assignToSelf(id) {
+    function dsRegistrationUrl(type, id, action = '') {
+        const base = type === 'business' ? '/api/ds/business-registrations' : '/api/ds/registrations';
+        return `${base}/${id}${action ? '/' + action : ''}`;
+    }
+
+    function attachmentUrl(reg, file) {
+        const kind = file.registration_kind || reg.registration_kind || (reg.registration_type === 'AMND' || reg.registration_type === 'AMEND' ? 'individual_amendment' : 'individual');
+        return `{{ url('api/ds/attachments') }}/${kind}/${file.id}`;
+    }
+
+    function assignToSelf(id, type = 'individual') {
         Swal.fire({
             title: 'Assign to yourself?',
             text: "You will be responsible for reviewing this application.",
@@ -709,7 +703,7 @@ $(document).ready(function() {
             confirmButtonText: 'Yes, assign to me'
         }).then((result) => {
             if (result.isConfirmed) {
-                $.post(`/api/ds/registrations/${id}/assign-to-self`)
+                $.post(dsRegistrationUrl(type, id, 'assign-to-self'))
                     .done(function() {
                         Swal.fire('Assigned!', 'Registration assigned to you successfully.', 'success');
                         loadStats();
@@ -725,16 +719,17 @@ $(document).ready(function() {
     }
 
     // Show Approve Modal
-    function showApproveModal(id) {
+    function showApproveModal(id, type = 'individual') {
         $('#approve-registration-id').val(id);
-        $('#approve-tin').val('');
+        $('#approve-registration-id').data('type', type);
         $('#approve-remarks').val('');
         $('#approveModal').modal('show');
     }
 
     // Show Reject Modal
-    function showRejectModal(id) {
+    function showRejectModal(id, type = 'individual') {
         $('#reject-registration-id').val(id);
+        $('#reject-registration-id').data('type', type);
         $('#reject-remarks').val('');
         $('#rejectModal').modal('show');
     }
@@ -742,15 +737,10 @@ $(document).ready(function() {
     // Confirm Approve
     $('#confirm-approve-btn').click(function() {
         let id = $('#approve-registration-id').val();
-        let tin = $('#approve-tin').val();
+        let type = $('#approve-registration-id').data('type') || 'individual';
         let remarks = $('#approve-remarks').val();
-        
-        if (!tin) {
-            Swal.fire('Error', 'TIN number is required', 'error');
-            return;
-        }
-        
-        $.post(`/api/ds/registrations/${id}/approve`, { tin: tin, remarks: remarks })
+
+        $.post(dsRegistrationUrl(type, id, 'approve'), { remarks: remarks })
             .done(function() {
                 Swal.fire('Approved!', 'Registration approved successfully.', 'success');
                 $('#approveModal').modal('hide');
@@ -766,6 +756,7 @@ $(document).ready(function() {
     // Confirm Reject
     $('#confirm-reject-btn').click(function() {
         let id = $('#reject-registration-id').val();
+        let type = $('#reject-registration-id').data('type') || 'individual';
         let remarks = $('#reject-remarks').val();
         
         if (!remarks) {
@@ -773,7 +764,7 @@ $(document).ready(function() {
             return;
         }
         
-        $.post(`/api/ds/registrations/${id}/reject`, { remarks: remarks })
+        $.post(dsRegistrationUrl(type, id, 'reject'), { remarks: remarks })
             .done(function() {
                 Swal.fire('Rejected!', 'Registration has been rejected.', 'success');
                 $('#rejectModal').modal('hide');
@@ -786,30 +777,29 @@ $(document).ready(function() {
             });
     });
 
-    // Event handlers for table buttons
-    $(document).on('click', '.assign-self-btn', function() {
-        assignToSelf($(this).data('id'));
-    });
-    
     $(document).on('click', '.approve-btn', function() {
-        showApproveModal($(this).data('id'));
+        showApproveModal($(this).data('id'), $(this).data('type'));
     });
     
     $(document).on('click', '.reject-btn', function() {
-        showRejectModal($(this).data('id'));
+        showRejectModal($(this).data('id'), $(this).data('type'));
     });
     
-    @if(auth()->user()->isAdmin())
+    @if(auth()->user()->hasPermission('registration.assign') || auth()->user()->hasPermission('registration.reassign'))
     $(document).on('click', '.assign-user-btn', function() {
-        let id = $(this).data('id');
-        $('#assign-registration-id').val(id);
-        $('#assign-user-id').val('');
+        const isReassign = String($(this).data('reassign')) === '1';
+        $('#assign-modal-title').text(isReassign ? 'Reassign to DS User' : 'Assign to DS User');
+        $('#confirm-assign-btn').text(isReassign ? 'Reassign' : 'Assign');
+        $('#assign-registration-id').val($(this).data('id'));
+        $('#assign-registration-id').data('type', $(this).data('type') || 'individual');
+        $('#assign-user-id').val(String(currentUserId));
         $('#assign-notes').val('');
         $('#assignUserModal').modal('show');
     });
     
     $('#confirm-assign-btn').click(function() {
         let id = $('#assign-registration-id').val();
+        let type = $('#assign-registration-id').data('type') || 'individual';
         let userId = $('#assign-user-id').val();
         let notes = $('#assign-notes').val();
         
@@ -818,12 +808,13 @@ $(document).ready(function() {
             return;
         }
         
-        $.post(`/api/ds/registrations/${id}/assign-to-user`, { user_id: userId, notes: notes })
+        $.post(dsRegistrationUrl(type, id, 'assign-to-user'), { user_id: userId, notes: notes })
             .done(function() {
                 Swal.fire('Assigned!', 'Registration assigned to user successfully.', 'success');
                 $('#assignUserModal').modal('hide');
                 loadStats();
                 unassignedTable.ajax.reload();
+                assignmentsTable.ajax.reload();
                 if (allTable) allTable.ajax.reload();
             })
             .fail(function() {
@@ -856,7 +847,8 @@ $(document).ready(function() {
 });
 
 // JavaScript variables
-const isAdmin = @json(auth()->user()->isAdmin());
+const isAdmin = @json(auth()->user()->hasPermission('registration.assign') || auth()->user()->hasPermission('registration.reassign'));
 const currentUserName = @json(auth()->user()->name);
+const currentUserId = @json((string) auth()->id());
 </script>
 @endpush

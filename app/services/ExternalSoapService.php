@@ -17,7 +17,7 @@ class ExternalSoapService
 
     public function __construct()
     {
-        $this->soapUrl = config('services.external_soap.url', 'http://192.168.1.32:6500/ouaf/XAIApp/xaiserver/CMINDEREG');
+        $this->soapUrl = config('services.external_soap.url', 'http://192.168.1.17:6500/ouaf/XAIApp/xaiserver/CMINDEREG');
         $this->username = config('services.external_soap.username', 'USER22');
         $this->password = config('services.external_soap.password', 'password22');
         $this->soapAction = config('services.external_soap.action', 'http://ouaf.oracle.com/spl/XAIXapp/xaiserver/CMINDEREG');

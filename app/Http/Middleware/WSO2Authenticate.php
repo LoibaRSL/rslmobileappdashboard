@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class WSO2Authenticate
@@ -37,6 +38,8 @@ class WSO2Authenticate
                     'name' => $wso2User['name'],
                     'email' => $wso2User['email'],
                     'username' => $wso2User['username'],
+                    'wso2_username' => $wso2User['username'],
+                    'wso2_attributes' => $wso2User,
                     'department' => $wso2User['department'] ?? null,
                     'password' => bcrypt(Str::random(16)),
                     'role' => 'Staff',

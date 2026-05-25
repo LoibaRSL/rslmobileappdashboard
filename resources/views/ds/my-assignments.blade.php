@@ -163,15 +163,15 @@ $(document).ready(function() {
             {
                 data: null,
                 render: function(data) {
-                    let actions = `<button class="btn btn-sm btn-info view-btn" data-id="${data.id}">
+                    let actions = `<button class="btn btn-sm btn-info view-btn" data-id="${data.id}" data-type="${data.registration_kind}">
                                         <i class="mdi mdi-eye"></i> View
                                     </button>`;
                     
                     if (data.status === 'PENDING' || data.status === 'UNDER_REVIEW') {
-                        actions += `<button class="btn btn-sm btn-success approve-btn ms-1" data-id="${data.id}">
+                        actions += `<button class="btn btn-sm btn-success approve-btn ms-1" data-id="${data.id}" data-type="${data.registration_kind}">
                                         <i class="mdi mdi-check"></i> Approve
                                     </button>
-                                    <button class="btn btn-sm btn-danger reject-btn ms-1" data-id="${data.id}">
+                                    <button class="btn btn-sm btn-danger reject-btn ms-1" data-id="${data.id}" data-type="${data.registration_kind}">
                                         <i class="mdi mdi-close"></i> Reject
                                     </button>`;
                     }
@@ -189,10 +189,12 @@ $(document).ready(function() {
     // View Registration Details
     $(document).on('click', '.view-btn', function() {
         var id = $(this).data('id');
+        var type = $(this).data('type') || 'individual';
+        var baseUrl = type === 'business' ? '{{ url('api/ds/business-registrations') }}' : '{{ url('api/ds/registrations') }}';
         $('#registrationModal').modal('show');
         $('#modal-ref').text('Loading...');
         
-        $.get(`{{ url('api/ds/registrations') }}/${id}`, function(response) {
+        $.get(`${baseUrl}/${id}`, function(response) {
             if (response.success) {
                 displayRegistrationDetails(response.registration);
             } else {
@@ -404,7 +406,7 @@ $(document).ready(function() {
                             ${reg.files && reg.files.length ? 
                                 `<div class="list-group">
                                     ${reg.files.map(file => `
-                                        <a href="/storage/${file.file_path}" target="_blank" class="list-group-item list-group-item-action">
+                                        <a href="${attachmentUrl(reg, file)}" target="_blank" class="list-group-item list-group-item-action">
                                             <i class="mdi mdi-file-pdf"></i> ${file.file_name}
                                             <small class="text-muted d-block">Type: ${file.file_type}</small>
                                         </a>
@@ -456,10 +458,10 @@ $(document).ready(function() {
         
         if (reg.status === 'PENDING' || reg.status === 'UNDER_REVIEW') {
             actions += `
-                <button type="button" class="btn btn-success" id="modal-approve" data-id="${reg.id}">
+                <button type="button" class="btn btn-success" id="modal-approve" data-id="${reg.id}" data-type="${reg.registration_kind}">
                     <i class="mdi mdi-check"></i> Approve
                 </button>
-                <button type="button" class="btn btn-danger" id="modal-reject" data-id="${reg.id}">
+                <button type="button" class="btn btn-danger" id="modal-reject" data-id="${reg.id}" data-type="${reg.registration_kind}">
                     <i class="mdi mdi-close"></i> Reject
                 </button>
             `;
@@ -470,43 +472,52 @@ $(document).ready(function() {
         // Bind modal actions
         $('#modal-approve').off('click').on('click', function() {
             $('#registrationModal').modal('hide');
-            showApproveModal($(this).data('id'));
+            showApproveModal($(this).data('id'), $(this).data('type'));
         });
         
         $('#modal-reject').off('click').on('click', function() {
             $('#registrationModal').modal('hide');
-            showRejectModal($(this).data('id'));
+            showRejectModal($(this).data('id'), $(this).data('type'));
         });
     }
     
-    function showApproveModal(id) {
+    function showApproveModal(id, type = 'individual') {
         $('#approve-id').val(id);
+        $('#approve-id').data('type', type);
         $('#approve-tin').val('');
         $('#approve-remarks').val('');
         $('#approveModal').modal('show');
     }
     
-    function showRejectModal(id) {
+    function showRejectModal(id, type = 'individual') {
         $('#reject-id').val(id);
+        $('#reject-id').data('type', type);
         $('#reject-remarks').val('');
         $('#rejectModal').modal('show');
+    }
+
+    function attachmentUrl(reg, file) {
+        const kind = file.registration_kind || reg.registration_kind || (reg.registration_type === 'AMND' || reg.registration_type === 'AMEND' ? 'individual_amendment' : 'individual');
+        return `{{ url('api/ds/attachments') }}/${kind}/${file.id}`;
     }
     
     // Approve button in table
     $(document).on('click', '.approve-btn', function() {
         var id = $(this).data('id');
-        showApproveModal(id);
+        showApproveModal(id, $(this).data('type'));
     });
     
     // Reject button in table
     $(document).on('click', '.reject-btn', function() {
         var id = $(this).data('id');
-        showRejectModal(id);
+        showRejectModal(id, $(this).data('type'));
     });
     
     // Confirm Approve
     $('#confirm-approve').click(function() {
         let id = $('#approve-id').val();
+        let type = $('#approve-id').data('type') || 'individual';
+        let baseUrl = type === 'business' ? '{{ url('api/ds/business-registrations') }}' : '{{ url('api/ds/registrations') }}';
         let tin = $('#approve-tin').val();
         let remarks = $('#approve-remarks').val();
         
@@ -517,12 +528,12 @@ $(document).ready(function() {
         
         // TIN format validation
         let tinPattern = /^IND\d{12}$/;
-        if (!tinPattern.test(tin)) {
+        if (type !== 'business' && !tinPattern.test(tin)) {
             Swal.fire('Error', 'TIN format should be IND followed by 12 digits (e.g., IND202605200001)', 'error');
             return;
         }
         
-        $.post(`{{ url('api/ds/registrations') }}/${id}/approve`, { 
+        $.post(`${baseUrl}/${id}/approve`, { 
             tin: tin, 
             remarks: remarks 
         })
@@ -540,6 +551,8 @@ $(document).ready(function() {
     // Confirm Reject
     $('#confirm-reject').click(function() {
         let id = $('#reject-id').val();
+        let type = $('#reject-id').data('type') || 'individual';
+        let baseUrl = type === 'business' ? '{{ url('api/ds/business-registrations') }}' : '{{ url('api/ds/registrations') }}';
         let remarks = $('#reject-remarks').val();
         
         if (!remarks || remarks.length < 10) {
@@ -547,7 +560,7 @@ $(document).ready(function() {
             return;
         }
         
-        $.post(`{{ url('api/ds/registrations') }}/${id}/reject`, { remarks: remarks })
+        $.post(`${baseUrl}/${id}/reject`, { remarks: remarks })
         .done(function(response) {
             Swal.fire('Rejected!', response.message || 'Registration rejected', 'success');
             $('#rejectModal').modal('hide');

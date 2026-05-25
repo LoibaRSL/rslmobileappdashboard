@@ -98,6 +98,7 @@ return new class extends Migration
             $table->text('amendment_notes')->nullable(); // ADDED - missing field
             $table->timestamp('amendment_submitted_at')->nullable(); // ADDED - missing field
             $table->text('remarks')->nullable();
+            $table->string('assigned_to')->nullable();
             
             $table->timestamps();
         });
@@ -120,10 +121,45 @@ return new class extends Migration
             $table->string('file_name');
             $table->timestamps();
         });
+
+        Schema::create('phone_details', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('tin_registration_id')->constrained('tin_registrations')->onDelete('cascade');
+            $table->string('phone_type')->default('CEL1');
+            $table->string('phone_code')->default('+266');
+            $table->string('phone_number');
+            $table->timestamps();
+        });
+
+        Schema::create('mobile_money_details', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('tin_registration_id')->nullable()->constrained('tin_registrations')->nullOnDelete();
+            $table->string('mobile_money_type')->nullable();
+            $table->string('mobile_money_number')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('banking_details', function (Blueprint $table) {
+            $table->increments('id');
+            $table->foreignId('tin_registration_id')->nullable()->constrained('tin_registrations')->nullOnDelete();
+            $table->string('bank_code')->nullable();
+            $table->string('bank_country')->nullable();
+            $table->string('account_holder_name')->nullable();
+            $table->string('branch')->nullable();
+            $table->string('account_number')->nullable();
+            $table->string('account_type')->nullable();
+            $table->string('swift_code')->nullable();
+            $table->string('branch_code')->nullable();
+            $table->string('file_path')->nullable();
+            $table->timestamps();
+        });
     }
 
     public function down()
     {
+        Schema::dropIfExists('banking_details');
+        Schema::dropIfExists('mobile_money_details');
+        Schema::dropIfExists('phone_details');
         Schema::dropIfExists('registration_files');
         Schema::dropIfExists('employers');
         Schema::dropIfExists('tin_registrations');

@@ -236,7 +236,7 @@ class ExternalSoapService
         
         // Trade details - CORRECTED MAPPING
         $tradeDetails = $amendmentData['trade_details'] ?? [];
-        $tradeItem = !empty($tradeDetails) ? $tradeDetails[0] ?? $tradeDetails : [];
+        $tradeDetails = $this->normaliseList($tradeDetails);
         
         // Contact info - CORRECTED MAPPING
         $contactInfo = $amendmentData['contact_info'] ?? [];
@@ -254,7 +254,12 @@ class ExternalSoapService
         
         // Bank/Mobile Money - CORRECTED MAPPING
         $bankMobileMoney = $amendmentData['bank_mobile_money'] ?? [];
-        $bankDetails = $bankMobileMoney['bank_details'] ?? [];
+        $bankDetails = $bankMobileMoney['bank_details'] ?? $bankMobileMoney['bankDetails'] ?? [];
+        $mobileMoneyDetails = $bankMobileMoney['mobile_money_details']
+            ?? $bankMobileMoney['mobileMoneyDetails']
+            ?? $bankMobileMoney['mobile_money']
+            ?? $bankMobileMoney['mobileMoney']
+            ?? [];
         
         // Tax registrations - CORRECTED MAPPING
         $taxRegistrations = $amendmentData['tax_registrations'] ?? [];
@@ -273,8 +278,8 @@ class ExternalSoapService
         $principalDetails = $amendmentData['principal_details'] ?? [];
         $principalDetailsXml = $this->buildPrincipalDetailsSection($principalDetails);
         $directorGroupXml = $this->buildDirectorSection($directorsPartners);
-        $bankDetailsXml = $this->buildBankDetailsSection($bankDetails);
-        $mobileDetailsXml = $this->buildMobileMoneyDetailsSection([]); // Not in sample data
+        $bankDetailsXml = $this->buildBankDetailsSection($this->normaliseList($bankDetails));
+        $mobileDetailsXml = $this->buildMobileMoneyDetailsSection($this->normaliseList($mobileMoneyDetails));
         $employerListXml = $this->buildEmployerListSection([]); // For sole traders only
         
         // FBT and WHT details
@@ -357,37 +362,13 @@ class ExternalSoapService
                </cmb:maidenName>
             </cmb:detailsSection>
             <cmb:tradenameSection>
-               <cmb:tradeNameDetails>
-                  <cmb:tradeNameDetailsList>
-                     <cmb:tradeName>
-                        <cmb:asCurrent>' . $this->escapeXml($tradeItem['trade_name'] ?? $legalName) . '</cmb:asCurrent>
-                     </cmb:tradeName>
-                     <cmb:natureOfBusiness>
-                        <cmb:asCurrent>' . $this->escapeXml($tradeItem['nature_of_business_code'] ?? '') . '</cmb:asCurrent>
-                     </cmb:natureOfBusiness>
-                     <cmb:seatCapacity>
-                        <cmb:asCurrent></cmb:asCurrent>
-                     </cmb:seatCapacity>
-                     <cmb:vehiclereg>
-                        <cmb:asCurrent></cmb:asCurrent>
-                     </cmb:vehiclereg>
-                     <cmb:businessActivity>
-                        <cmb:asCurrent></cmb:asCurrent>
-                     </cmb:businessActivity>
-                     <cmb:sbtTurnOver>
-                        <cmb:asCurrent></cmb:asCurrent>
-                     </cmb:sbtTurnOver>
-                     <cmb:commencementDate>
-                        <cmb:asCurrent>' . $this->escapeXml($tradeItem['commencement_date'] ?? $receiveDate) . '</cmb:asCurrent>
-                     </cmb:commencementDate>
-                     <cmb:traderNumber>
-                        <cmb:asCurrent>' . $this->escapeXml($tradeItem['trader_number'] ?? $amendment->reference_number) . '</cmb:asCurrent>
-                     </cmb:traderNumber>
-                  </cmb:tradeNameDetailsList>
+               <cmb:tradeNameDetails>' . $this->buildTradeNameDetailsSection($tradeDetails, $legalName, $receiveDate, $amendment->reference_number) . '
                </cmb:tradeNameDetails>
             </cmb:tradenameSection>' .
             $principalDetailsXml . '
-            <cmb:contactSection>' . $contactAddressXml . $phoneDetailsXml . '
+            <cmb:contactSection>' . $contactAddressXml . '
+               <cmb:phoneDetails>' . $phoneDetailsXml . '
+               </cmb:phoneDetails>
                <cmb:emailAddress>
                   <cmb:asCurrent>' . $this->escapeXml($email) . '</cmb:asCurrent>
                </cmb:emailAddress>
@@ -888,22 +869,24 @@ class ExternalSoapService
         $phoneXml = '';
         if (!empty($phones)) {
             foreach ($phones as $phone) {
-                if (!empty($phone['phoneNumber'])) {
+                $phoneNumber = $phone['phoneNumber'] ?? $phone['phone_number'] ?? '';
+                if (is_array($phoneNumber)) {
+                    $phoneNumber = $phoneNumber['text'] ?? '';
+                }
+
+                if (!empty($phoneNumber)) {
                     $phoneXml .= '
-                    <cmb:phoneDetails>
                      <cmb:phoneDetailsList>
                         <cmb:phoneType>
-                           <cmb:asCurrent>' . $this->escapeXml($phone['phoneType'] ?? '') . '</cmb:asCurrent>
+                           <cmb:asCurrent>' . $this->escapeXml($phone['phoneType'] ?? $phone['phone_type'] ?? '') . '</cmb:asCurrent>
                         </cmb:phoneType>
                         <cmb:phoneCode>
-                           <cmb:asCurrent>' . $this->escapeXml($phone['phoneCode'] ?? '') . '</cmb:asCurrent>
+                           <cmb:asCurrent>' . $this->escapeXml($phone['phoneCode'] ?? $phone['phone_code'] ?? '') . '</cmb:asCurrent>
                         </cmb:phoneCode>
                         <cmb:phoneNumber>
-                           <cmb:asCurrent>' . $this->escapeXml($phone['phoneNumber']) . '</cmb:asCurrent>
+                           <cmb:asCurrent>' . $this->escapeXml($phoneNumber) . '</cmb:asCurrent>
                         </cmb:phoneNumber>
-                     </cmb:phoneDetailsList>
-                     </cmb:phoneDetails>
-                     <phoneDetails>';
+                     </cmb:phoneDetailsList>';
                 }
             }
         }
@@ -1075,30 +1058,35 @@ class ExternalSoapService
     {
         $phoneDetailsXml = '';
         
+        if (empty($phoneDetails) && !empty($structuredPhones)) {
+            $phoneDetails = $structuredPhones;
+        }
+
         if (!empty($phoneDetails)) {
             foreach ($phoneDetails as $phone) {
-                if (!empty($phone['phone_number'])) {
+                $phoneNumber = $phone['phone_number'] ?? $phone['phoneNumber'] ?? '';
+                if (is_array($phoneNumber)) {
+                    $phoneNumber = $phoneNumber['text'] ?? '';
+                }
+
+                if (!empty($phoneNumber)) {
                     $phoneDetailsXml .= '
-                 <cmb:phoneDetails>
                   <cmb:phoneDetailsList>
-                     <cmb:phoneType><cmb:asCurrent>' . $this->escapeXml($phone['phone_type'] ?? 'OFC') . '</cmb:asCurrent></cmb:phoneType>
-                     <cmb:phoneCode><cmb:asCurrent>' . $this->escapeXml($phone['phone_code'] ?? '266') . '</cmb:asCurrent></cmb:phoneCode>
-                     <cmb:phoneNumber><cmb:asCurrent>' . $this->escapeXml($phone['phone_number']) . '</cmb:asCurrent></cmb:phoneNumber>
-                  </cmb:phoneDetailsList>
-                  </cmb:phoneDetails>';
+                     <cmb:phoneType><cmb:asCurrent>' . $this->escapeXml($phone['phone_type'] ?? $phone['phoneType'] ?? 'OFC') . '</cmb:asCurrent></cmb:phoneType>
+                     <cmb:phoneCode><cmb:asCurrent>' . $this->escapeXml($phone['phone_code'] ?? $phone['phoneCode'] ?? '266') . '</cmb:asCurrent></cmb:phoneCode>
+                     <cmb:phoneNumber><cmb:asCurrent>' . $this->escapeXml($phoneNumber) . '</cmb:asCurrent></cmb:phoneNumber>
+                  </cmb:phoneDetailsList>';
                 }
             }
         }
         
         if (empty($phoneDetailsXml)) {
             $phoneDetailsXml .= '
-                  <cmb:phoneDetails>
                   <cmb:phoneDetailsList>
                      <cmb:phoneType><cmb:asCurrent>CEL1</cmb:asCurrent></cmb:phoneType>
                      <cmb:phoneCode><cmb:asCurrent>266</cmb:asCurrent></cmb:phoneCode>
                      <cmb:phoneNumber><cmb:asCurrent>0000000</cmb:asCurrent></cmb:phoneNumber>
-                  </cmb:phoneDetailsList>
-                  </cmb:phoneDetails>';
+                  </cmb:phoneDetailsList>';
         }
 
         return $phoneDetailsXml;
@@ -1174,8 +1162,8 @@ class ExternalSoapService
             foreach ($mobileMoneyDetails as $mobile) {
                 $mobileDetailsXml .= '
                   <cmb:mobileDetailsList>
-                     <cmb:mobileMoney><cmb:asCurrent>' . $this->escapeXml($mobile['mobile_money_type'] ?? '') . '</cmb:asCurrent></cmb:mobileMoney>
-                     <cmb:mobileMoneyNumber><cmb:asCurrent>' . $this->escapeXml($mobile['mobile_number'] ?? '') . '</cmb:asCurrent></cmb:mobileMoneyNumber>
+                     <cmb:mobileMoney><cmb:asCurrent>' . $this->escapeXml($mobile['mobile_money_type'] ?? $mobile['mobileMoneyType'] ?? $mobile['mobileMoney'] ?? '') . '</cmb:asCurrent></cmb:mobileMoney>
+                     <cmb:mobileMoneyNumber><cmb:asCurrent>' . $this->escapeXml($mobile['mobile_number'] ?? $mobile['mobile_money_number'] ?? $mobile['mobileMoneyNumber'] ?? $mobile['number'] ?? '') . '</cmb:asCurrent></cmb:mobileMoneyNumber>
                      <cmb:accountAutoPayId><cmb:asCurrent>' . $this->escapeXml($mobile['account_auto_pay_id'] ?? '') . '</cmb:asCurrent></cmb:accountAutoPayId>
                   </cmb:mobileDetailsList>';
             }
@@ -1189,6 +1177,65 @@ class ExternalSoapService
         }
 
         return $mobileDetailsXml;
+    }
+
+    protected function buildTradeNameDetailsSection(array $tradeDetails, ?string $fallbackName, string $fallbackDate, string $fallbackTraderNumber): string
+    {
+        $tradeDetails = $this->normaliseList($tradeDetails);
+
+        if (empty($tradeDetails)) {
+            $tradeDetails = [[
+                'trade_name' => $fallbackName,
+                'commencement_date' => $fallbackDate,
+                'trader_number' => $fallbackTraderNumber,
+            ]];
+        }
+
+        $xml = '';
+        foreach ($tradeDetails as $trade) {
+            $xml .= '
+                  <cmb:tradeNameDetailsList>
+                     <cmb:tradeName>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['trade_name'] ?? $trade['tradeName'] ?? $fallbackName) . '</cmb:asCurrent>
+                     </cmb:tradeName>
+                     <cmb:natureOfBusiness>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['nature_of_business_code'] ?? $trade['natureOfBusinessCode'] ?? '') . '</cmb:asCurrent>
+                     </cmb:natureOfBusiness>
+                     <cmb:seatCapacity>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['seat_capacity'] ?? $trade['seatCapacity'] ?? '') . '</cmb:asCurrent>
+                     </cmb:seatCapacity>
+                     <cmb:vehiclereg>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['vehicle_reg'] ?? $trade['vehicleReg'] ?? '') . '</cmb:asCurrent>
+                     </cmb:vehiclereg>
+                     <cmb:businessActivity>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['business_activity'] ?? $trade['businessActivity'] ?? '') . '</cmb:asCurrent>
+                     </cmb:businessActivity>
+                     <cmb:sbtTurnOver>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['sbt_turnover'] ?? $trade['sbtTurnOver'] ?? '') . '</cmb:asCurrent>
+                     </cmb:sbtTurnOver>
+                     <cmb:commencementDate>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['commencement_date'] ?? $trade['commencementDate'] ?? $fallbackDate) . '</cmb:asCurrent>
+                     </cmb:commencementDate>
+                     <cmb:traderNumber>
+                        <cmb:asCurrent>' . $this->escapeXml($trade['trader_number'] ?? $trade['traderNumber'] ?? $trade['licenseNumber'] ?? $fallbackTraderNumber) . '</cmb:asCurrent>
+                     </cmb:traderNumber>
+                  </cmb:tradeNameDetailsList>';
+        }
+
+        return $xml;
+    }
+
+    protected function normaliseList(mixed $value): array
+    {
+        if (is_string($value)) {
+            $value = json_decode($value, true) ?? [];
+        }
+
+        if (!is_array($value) || $value === []) {
+            return [];
+        }
+
+        return array_is_list($value) ? $value : [$value];
     }
 
     protected function escapeXml($value): string

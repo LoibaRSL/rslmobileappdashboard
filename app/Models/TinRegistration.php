@@ -74,6 +74,7 @@ class TinRegistration extends Model
         'remarks',
         'amendment_notes',
         'amendment_submitted_at',
+        'assigned_to',
         'assigned_to_user_id',
         'assigned_at',
     ];
@@ -91,15 +92,20 @@ class TinRegistration extends Model
    // Generate TIN
     public function generateTIN(): string
     {
-        $prefix = 'IND';
-        $random = Str::random(6);
-        $timestamp = now()->format('His');
-        
-        //return "{$prefix}{$random}{$timestamp}";
-		return 'IND' . date('Ymd') . str_pad(
-                    self::whereDate('created_at', today())->count() + 1, 
-                    4, '0', STR_PAD_LEFT
-                );
+        $prefix = 'IND' . now()->format('Ymd');
+        $sequence = self::where('tin', 'like', $prefix . '%')
+            ->pluck('tin')
+            ->map(function ($tin) use ($prefix) {
+                return (int) substr((string) $tin, strlen($prefix));
+            })
+            ->max() + 1;
+
+        do {
+            $tin = $prefix . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+            $sequence++;
+        } while (self::where('tin', $tin)->exists());
+
+        return $tin;
     }
 
     // Check if this registration has pending amendments

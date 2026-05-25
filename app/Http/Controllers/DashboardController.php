@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\BusinessAmendment;
 use App\Models\BusinessRegistration;
 use App\Models\BusinessRegistrationLog;
+use App\Models\RiitReturn;
+use App\Models\TinRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -13,6 +16,13 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        if (!auth()->user()?->isDigitalServices()) {
+            return view('dashboard-general', [
+                'stats' => $this->getGeneralDashboardStats(),
+                'recent_returns' => $this->getRecentReturns(),
+            ]);
+        }
+
         // Cache dashboard data for 5 minutes to reduce database load
         $dashboardData = Cache::remember('dashboard_data_' . auth()->id(), 300, function () {
             return [
@@ -28,6 +38,25 @@ class DashboardController extends Controller
         return view('dashboard', $dashboardData);
     }
 
+    private function getGeneralDashboardStats(): array
+    {
+        return [
+            'resident_returns' => RiitReturn::count(),
+            'returns_this_month' => RiitReturn::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+            'returns_today' => RiitReturn::whereDate('created_at', today())->count(),
+            'attachments' => DB::table('riit_return_attachments')->count(),
+        ];
+    }
+
+    private function getRecentReturns()
+    {
+        return RiitReturn::latest()
+            ->limit(8)
+            ->get(['id', 'reference_number', 'tin', 'return_type', 'period_start_date', 'period_end_date', 'tax_due', 'created_at']);
+    }
+
     /**
      * Get dashboard statistics
      */
@@ -37,15 +66,31 @@ class DashboardController extends Controller
         $cacheKey = 'dashboard_stats';
         
         return Cache::remember($cacheKey, 300, function () {
+            $individualPending = TinRegistration::whereIn('status', ['PENDING', 'UNDER_REVIEW'])->count();
+            $individualApproved = TinRegistration::where('status', 'APPROVED')->count();
+            $individualRejected = TinRegistration::where('status', 'REJECTED')->count();
+            $businessPending = BusinessRegistration::whereIn('status', ['submitted', 'under_review'])->count();
+            $businessApproved = BusinessRegistration::where('status', 'approved')->count();
+            $businessRejected = BusinessRegistration::where('status', 'rejected')->count();
+            $amendmentPending = BusinessAmendment::whereIn('status', ['submitted', 'under_review'])->count();
+            $amendmentApproved = BusinessAmendment::where('status', 'approved')->count();
+            $amendmentRejected = BusinessAmendment::where('status', 'rejected')->count();
+
             return [
-                'total_applications' => BusinessRegistration::count(),
-                'new_applications' => BusinessRegistration::where('status', 'pending')->count(),
-                'approved_applications' => BusinessRegistration::where('status', 'approved')->count(),
-                'rejected_applications' => BusinessRegistration::where('status', 'rejected')->count(),
-                'pending_approvals' => BusinessRegistration::where('status', 'pending')->count(),
-                'today_applications' => BusinessRegistration::whereDate('created_at', today())->count(),
-                'this_week_applications' => BusinessRegistration::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-                'this_month_applications' => BusinessRegistration::whereMonth('created_at', now()->month)->count(),
+                'total_applications' => TinRegistration::count() + BusinessRegistration::count() + BusinessAmendment::count(),
+                'new_applications' => $individualPending + $businessPending + $amendmentPending,
+                'approved_applications' => $individualApproved + $businessApproved + $amendmentApproved,
+                'rejected_applications' => $individualRejected + $businessRejected + $amendmentRejected,
+                'pending_approvals' => $individualPending + $businessPending + $amendmentPending,
+                'today_applications' => TinRegistration::whereDate('created_at', today())->count()
+                    + BusinessRegistration::whereDate('created_at', today())->count()
+                    + BusinessAmendment::whereDate('created_at', today())->count(),
+                'this_week_applications' => TinRegistration::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count()
+                    + BusinessRegistration::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count()
+                    + BusinessAmendment::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+                'this_month_applications' => TinRegistration::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count()
+                    + BusinessRegistration::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count()
+                    + BusinessAmendment::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
             ];
         });
     }
@@ -60,7 +105,9 @@ class DashboardController extends Controller
         
         // If user has registration approval permissions
         if ($user->hasPermission('registration.approve') || $user->hasRole('digital_services') || $user->hasRole('admin')) {
-            $pendingCount = BusinessRegistration::where('status', 'pending')->count();
+            $pendingCount = TinRegistration::whereIn('status', ['PENDING', 'UNDER_REVIEW'])->count()
+                + BusinessRegistration::whereIn('status', ['submitted', 'under_review'])->count()
+                + BusinessAmendment::whereIn('status', ['submitted', 'under_review'])->count();
             if ($pendingCount > 0) {
                 $tasks->push([
                     'title' => 'Pending Business Registrations',
@@ -94,8 +141,7 @@ class DashboardController extends Controller
      */
     private function getRecentIndividualApplications()
     {
-        return BusinessRegistration::with(['contactDetails', 'personalIdentification'])
-            ->where('is_sole_trader', true)
+        return BusinessRegistration::where('is_sole_trader', true)
             ->orderBy('created_at', 'desc')
             ->limit(7)
             ->get()

@@ -14,6 +14,10 @@ class DigitalServicesMiddleware
         $user = Auth::user();
         
         if (!$user) {
+            if (!$request->expectsJson()) {
+                return redirect()->route('login');
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthenticated'
@@ -21,6 +25,10 @@ class DigitalServicesMiddleware
         }
 
         if (!$user->isDigitalServices()) {
+            if (!$request->expectsJson()) {
+                abort(403, 'Access denied. Digital Services or Administrator role required.');
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied. Digital Services role required.'

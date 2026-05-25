@@ -9,21 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('tin_registrations', function (Blueprint $table) {
-            $table->foreignId('assigned_to_user_id')
-                  ->nullable()
-                  ->after('user_id')
-                  ->constrained('users')
-                  ->nullOnDelete();
-            $table->timestamp('assigned_at')->nullable();
-        });
+        if (!Schema::hasColumn('tin_registrations', 'assigned_to')) {
+            Schema::table('tin_registrations', function (Blueprint $table) {
+                $table->string('assigned_to')->nullable();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('tin_registrations', function (Blueprint $table) {
-            $table->dropForeign(['assigned_to_user_id']);
-            $table->dropColumn(['assigned_to_user_id', 'assigned_at']);
-        });
+        // The dump schema owns the assigned_to column, so this migration is intentionally non-destructive.
     }
 };

@@ -16,12 +16,22 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(RolesAndPermissionsSeeder::class);
 
-        User::factory()->create([
-            'name' => 'User',
+        $user = User::updateOrCreate([
             'email' => 'demo@user.com',
-            'password' => Hash::make('password')
+        ], [
+            'name' => 'User',
+            'username' => 'demo',
+            'department' => 'Administration',
+            'role' => 'admin',
+            'password' => Hash::make('password'),
+            'is_active' => 1,
         ]);
+
+        $adminRole = \App\Models\Role::where('name', 'admin')->first();
+        if ($adminRole) {
+            $user->roles()->sync([$adminRole->id]);
+        }
     }
 }

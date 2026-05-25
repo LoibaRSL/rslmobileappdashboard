@@ -7,18 +7,9 @@ use App\Models\Role;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class RoleManagementController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('check.permission:roles.view')->only(['index', 'show']);
-        $this->middleware('check.permission:roles.create')->only(['create', 'store']);
-        $this->middleware('check.permission:roles.edit')->only(['edit', 'update']);
-        $this->middleware('check.permission:roles.delete')->only(['destroy']);
-    }
-
     public function index()
     {
         $roles = Role::with('permissions', 'users')->get();

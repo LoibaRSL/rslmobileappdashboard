@@ -6,21 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class UserManagementController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
     public function index(Request $request)
     {
-        if (!Gate::allows('view_users')) {
-            abort(403);
-        }
-
         $search = $request->get('search');
         $roleFilter = $request->get('role');
 
@@ -47,10 +37,6 @@ class UserManagementController extends Controller
 
     public function edit(User $user)
     {
-        if (!Gate::allows('edit_users')) {
-            abort(403);
-        }
-
         $roles = Role::all();
         $userRoles = $user->roles->pluck('id')->toArray();
 
@@ -59,10 +45,6 @@ class UserManagementController extends Controller
 
     public function update(Request $request, User $user)
     {
-        if (!Gate::allows('edit_users')) {
-            abort(403);
-        }
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -77,10 +59,6 @@ class UserManagementController extends Controller
 
     public function assignRoles(Request $request, User $user)
     {
-        if (!Gate::allows('assign_roles')) {
-            abort(403);
-        }
-
         $validated = $request->validate([
             'roles' => 'array',
             'roles.*' => 'exists:roles,id'
@@ -88,18 +66,19 @@ class UserManagementController extends Controller
 
         $user->roles()->sync($validated['roles'] ?? []);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Roles assigned successfully!'
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Roles assigned successfully!'
+            ]);
+        }
+
+        return redirect()->route('admin.users.edit', $user)
+            ->with('success', 'Roles assigned successfully!');
     }
 
     public function toggleStatus(User $user)
     {
-        if (!Gate::allows('edit_users')) {
-            abort(403);
-        }
-
         $user->is_active = !$user->is_active;
         $user->save();
 
@@ -112,10 +91,6 @@ class UserManagementController extends Controller
 
     public function destroy(User $user)
     {
-        if (!Gate::allows('delete_users')) {
-            abort(403);
-        }
-
         $user->delete();
 
         return redirect()->route('admin.users.index')
@@ -124,10 +99,6 @@ class UserManagementController extends Controller
 
     public function syncFromWSO2()
     {
-        if (!Gate::allows('create_users')) {
-            abort(403);
-        }
-
         // This would call WSO2 SCIM API to fetch users
         // Implement based on your WSO2 SCIM endpoint
         

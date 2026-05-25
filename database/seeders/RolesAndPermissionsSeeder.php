@@ -42,6 +42,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ['name' => 'registration.view', 'display_name' => 'View Registrations', 'module' => 'registration'],
             ['name' => 'registration.approve', 'display_name' => 'Approve Registrations', 'module' => 'registration'],
             ['name' => 'registration.reject', 'display_name' => 'Reject Registrations', 'module' => 'registration'],
+            ['name' => 'registration.assign', 'display_name' => 'Assign Registrations', 'module' => 'registration'],
+            ['name' => 'registration.reassign', 'display_name' => 'Reassign Registrations', 'module' => 'registration'],
             ['name' => 'registration.dashboard', 'display_name' => 'Access Registration Dashboard', 'module' => 'registration'],
             
             // Filing Module Permissions
@@ -75,7 +77,7 @@ class RolesAndPermissionsSeeder extends Seeder
             [
                 'name' => 'digital_services',
                 'display_name' => 'Digital Services',
-                'description' => 'Full access to registration module (view, approve, reject) and filing module (view, download attachments)',
+                'description' => 'Full access to registration module (view, approve, reject, assign, reassign) and filing module (view, download attachments)',
                 'level' => 2
             ],
             [

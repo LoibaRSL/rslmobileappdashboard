@@ -66,7 +66,7 @@ $(document).ready(function() {
             {
                 data: null,
                 render: function(data) {
-                    return `<button class="btn btn-sm btn-primary assign-btn" data-id="${data.id}">
+                    return `<button class="btn btn-sm btn-primary assign-btn" data-id="${data.id}" data-type="${data.registration_kind}">
                                 <i class="mdi mdi-account-plus"></i> Assign to Me
                             </button>`;
                 }
@@ -78,12 +78,14 @@ $(document).ready(function() {
     
     $(document).on('click', '.assign-btn', function() {
         var id = $(this).data('id');
+        var type = $(this).data('type') || 'individual';
         var btn = $(this);
+        var baseUrl = type === 'business' ? '{{ url('api/ds/business-registrations') }}' : '{{ url('api/ds/registrations') }}';
         
         if (confirm('Assign this registration to yourself?')) {
             btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Assigning...');
             
-            $.post(`{{ url('api/ds/registrations') }}/${id}/assign-to-self`)
+            $.post(`${baseUrl}/${id}/assign-to-self`)
                 .done(function(response) {
                     alert(response.message || 'Registration assigned successfully');
                     table.ajax.reload();

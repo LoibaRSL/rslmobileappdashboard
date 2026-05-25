@@ -281,7 +281,7 @@ class App {
                         let increment // Increment step for smooth animation
 
                         if (Number.isInteger(target)) {
-                            increment = Math.floor(target / 25) // Increment for integer values
+                            increment = Math.max(1, Math.ceil(target / 25)) // Increment for integer values
                         } else {
                             increment = target / 25 // Increment for float values
                         }

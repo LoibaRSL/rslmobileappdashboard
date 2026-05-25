@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\TinRegistrationController;
+use App\Http\Controllers\Api\RiitReturnController;
 use App\Http\Controllers\BusinessRegistrationController;
 use App\Http\Controllers\BusinessAmendmentController;
 use App\Http\Controllers\TinRegistrationsController;
@@ -33,6 +34,7 @@ Route::post('/business-registration', [BusinessRegistrationController::class, 's
 Route::get('/business-registrations', [BusinessRegistrationController::class, 'index']);
 Route::get('/business-registration/{id}', [BusinessRegistrationController::class, 'show']);
 Route::post('/amend', [BusinessAmendmentController::class, 'store']);
+Route::post('/riit/submit', [RiitReturnController::class, 'submit']);
 
 Route::prefix('tin-registration')->group(function () {
     Route::post('/register', [TinRegistrationsController::class, 'register']);

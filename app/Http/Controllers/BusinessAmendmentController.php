@@ -120,14 +120,15 @@ class BusinessAmendmentController extends Controller
         ]);
         
         // Check if original registration exists
-        $originalRegistration = BusinessAmendment::where('tin', $tin)
+        $originalRegistration = BusinessRegistration::where('new_tin', $tin)
+            ->orWhere('old_tin', $tin)
             ->latest()
             ->first();
         
         Log::info('Original registration lookup:', [
             'found' => $originalRegistration !== null,
             'registration_id' => $originalRegistration ? $originalRegistration->id : null,
-            'registration_tin' => $originalRegistration ? ($originalRegistration->tin ?? $originalRegistration->tin ?? $originalRegistration->tin) : null,
+            'registration_tin' => $originalRegistration ? ($originalRegistration->new_tin ?? $originalRegistration->old_tin) : null,
         ]);
         
         // Generate reference number
